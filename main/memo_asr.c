@@ -36,13 +36,15 @@ typedef struct {
   uint8_t data[WIRE_BYTES];
 } audio_chunk_t;
 static atomic_bool stop_requested, cancel_requested, failure_claimed;
-static atomic_uint elapsed_ms, peak;
+static atomic_uint elapsed_ms, peak, first_audio_ms;
 static atomic_int current_phase;
 static EventGroupHandle_t events;
 static QueueHandle_t audio_queue;
 static uint8_t *rx;
 static memo_stream_t stream;
 static bool limited;
+static unsigned text_updates, interim_updates;
+static int32_t first_text_ms;
 static char transcript[MEMO_TEXT_BYTES], failure[120];
 static void fail(const char *message) {
   bool expected = false;
@@ -94,13 +96,26 @@ static void receive_packet(void) {
   if (cJSON_IsString(text) && text->valuestring) {
     size_t n =
         memo_text_prefix(text->valuestring, MEMO_MAX_CHARS, sizeof(transcript) - 1);
+    bool changed = strlen(transcript) != n || memcmp(transcript, text->valuestring, n);
     memcpy(transcript, text->valuestring, n);
     transcript[n] = 0;
     if (n < strlen(text->valuestring)) {
       limited = true;
       atomic_store(&stop_requested, true);
     }
-    publish(limited ? "已达240字，正在结束识别" : "正在听，请继续说…");
+    if (changed) {
+      text_updates++;
+      if (!p.final)
+        interim_updates++;
+      unsigned started = atomic_load(&first_audio_ms);
+      if (n && first_text_ms < 0 && started) {
+        first_text_ms = (uint32_t)(esp_timer_get_time() / 1000) - started;
+        ESP_LOGI("memo", "First text: audio_to_result_ms=%ld final=%d",
+                 (long)first_text_ms, p.final);
+      }
+    }
+    if (changed || limited)
+      publish(limited ? "已达240字，正在结束识别" : "正在听，请继续说…");
   }
   cJSON_Delete(root);
   // Definite utterances are not the final session result. Only frame flags end
@@ -283,6 +298,9 @@ void memo_asr_run(const memo_config_t *config) {
   atomic_store(&failure_claimed, false);
   atomic_store(&elapsed_ms, 0);
   atomic_store(&peak, 0);
+  atomic_store(&first_audio_ms, 0);
+  text_updates = interim_updates = 0;
+  first_text_ms = -1;
   atomic_store(&current_phase, MEMO_CONNECTING);
   transcript[0] = failure[0] = 0;
   memset(&stream, 0, sizeof(stream));
@@ -375,12 +393,14 @@ void memo_asr_run(const memo_config_t *config) {
     fail("连接超时，请检查网络");
     goto cleanup;
   }
-  const char *request =
+  static const char request[] =
       "{\"user\":{\"uid\":\"passport-memo\"},\"audio\":{\"format\":\"ogg\","
       "\"codec\":\"opus\",\"rate\":16000,\"bits\":16,\"channel\":1},"
       "\"request\":{\"model_name\":\"bigmodel\",\"enable_itn\":true,\"enable_"
       "punc\":true,\"enable_ddc\":false,\"enable_nonstream\":true,\"show_"
-      "utterances\":false,\"result_type\":\"full\"}}";
+      "utterances\":false,\"result_type\":\"full\","
+      "\"enable_accelerate_text\":true,\"accelerate_score\":10}}";
+  _Static_assert(sizeof(request) - 1 <= WIRE_BYTES, "ASR options exceed request buffer");
   n = memo_request(packet, WIRE_BYTES + 8, request, strlen(request), false, false);
   if (esp_websocket_client_send_bin(client, (char *)packet, n, pdMS_TO_TICKS(3000)) !=
       (int)n) {
@@ -398,6 +418,10 @@ void memo_asr_run(const memo_config_t *config) {
     if (xQueueReceive(audio_queue, packet + 6, pdMS_TO_TICKS(100))) {
       uint16_t encoded_size;
       memcpy(&encoded_size, packet + 6, sizeof(encoded_size));
+      // The initial 99-byte Ogg headers contain no captured audio. Start the
+      // latency clock with the first audio batch, not the TLS handshake.
+      if (!atomic_load(&first_audio_ms) && encoded_size != 99)
+        atomic_store(&first_audio_ms, (uint32_t)(esp_timer_get_time() / 1000));
       n = memo_request(packet, WIRE_BYTES + 8, packet + 8, encoded_size, true, false);
       if (esp_websocket_client_send_bin(client, (char *)packet, n,
                                         pdMS_TO_TICKS(1500)) != (int)n) {
@@ -455,6 +479,8 @@ cleanup:
   ESP_LOGI("memo", "ASR finished: success=%d text_bytes=%u partial=%d heap=%lu",
            successful, (unsigned)strlen(transcript), partial,
            (unsigned long)esp_get_free_heap_size());
+  ESP_LOGI("memo", "Text updates=%u interim=%u first_audio_to_text_ms=%ld",
+           text_updates, interim_updates, (long)first_text_ms);
   memo_asr_update(transcript[0] ? MEMO_REVIEW : MEMO_ERROR, transcript,
                   transcript[0]
                       ? (successful ? (limited ? "仅保留前240字，请确认后保存"

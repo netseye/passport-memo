@@ -13,7 +13,7 @@ Recorded on **2026-09-11**. Build and host tests are reproducible through [the b
 - Actual LVGL UI rendered on the host, including all nine phases with 240-character text. Prior measured peak: 29,336 / 40,960 bytes.
 - EE04 host tests: content/image/refresh behavior, nonce expiry, replay handling, rollover and signing bytes. EE04 firmware compiles separately for XIAO ESP32-S3.
 
-Published-source build: Passport application **2,089,792 bytes / 3,145,728 limit**, merged image **2,155,328 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
+Published-source build: Passport application **2,090,448 bytes / 3,145,728 limit**, merged image **2,155,984 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
 
 ## Real Passport session
 
@@ -44,6 +44,14 @@ The cache-enabled build completed a **4.86-second** recording and original-audio
 The volume follow-up defaults to 85% and adds +6 dB playback gain with a soft limit. Tests exhaust all 16-bit PCM values for monotonicity, symmetry and overflow. Final listening quality still needs physical confirmation.
 
 The volume update preserved cached audio, identity and settings byte-for-byte. After reboot, the earlier 4.86-second clip replayed successfully. Two subsequent 6.6- and 8.2-second recording/ASR/replay cycles both returned `success=1 / partial=0` with exact output sample counts. The updated build measured a 3,496-microsecond maximum decode, 18,244-byte minimum free decoder stack and 39,680-byte minimum free heap after ASR connection. No crash was observed; the user has not yet confirmed the revised volume or distortion.
+
+## First-text acceleration device test
+
+The build with `enable_accelerate_text=true / accelerate_score=10` and 50 ms UI checks is installed. Application verification passed and cached audio, identity and settings remained byte-for-byte unchanged. The complete local build, host tests and nine-state / 240-character UI stress rendering passed; LVGL peaked at 29,336 bytes.
+
+In one **32.42-second** device session, the first nonempty result arrived **1,766 ms** after sending began for the first actual audio batch. It had `final=0`, about 30 seconds before recording ended. There were **36 text changes**, all in non-final packets. The session ended with `success=1 / partial=0`; replay emitted 518,720 samples and completed normally.
+
+The timing includes networking, cloud processing and initial silence after the first audio send. It does not measure mouth-to-LCD latency. No controlled old-build baseline exists, so this does not establish a speedup percentage. The user's subjective comparison of first-text speed and early word errors remains unconfirmed.
 
 ## Still to verify on hardware
 

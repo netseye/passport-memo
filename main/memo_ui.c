@@ -11,6 +11,12 @@ static uint32_t revision;
 static memo_phase_t shown_phase = 99;
 static uint32_t shown_id;
 static int scroll_y;
+static void set_text(lv_obj_t *label, const char *text) {
+  // Audio levels revise the view at 10 Hz even when the transcript is unchanged.
+  // Reuse LVGL's owned string to avoid reallocating and redrawing that text.
+  if (strcmp(lv_label_get_text(label), text))
+    lv_label_set_text(label, text);
+}
 static const char *phase_name(memo_phase_t p) {
   static const char *names[] = {"灵感收件箱", "正在连接",     "正在聆听",
                                 "正在整理",   "确认这条备忘", "我的备忘录",
@@ -34,9 +40,9 @@ static void update(lv_timer_t *timer) {
     snprintf(b, sizeof(b), "%d%%", v.battery);
   else
     snprintf(b, sizeof(b), "--%%");
-  lv_label_set_text(battery, b);
+  set_text(battery, b);
   snprintf(b, sizeof(b), "%s  %s", v.online ? "●" : "○", phase_name(v.phase));
-  lv_label_set_text(status, b);
+  set_text(status, b);
   lv_obj_set_style_bg_color(
       paper, lv_color_hex(v.phase == MEMO_ERROR ? 0xFFE4D4 : UI_PAPER), 0);
   if (v.phase == MEMO_HOME) {
@@ -44,18 +50,18 @@ static void update(lv_timer_t *timer) {
              "记录一句，留住灵感。\n\n确定键开始录音\n上下键查看历史\n\n已收藏 "
              "%d / 32 条",
              v.count);
-    lv_label_set_text(content, b);
-    lv_label_set_text(hint, "确定  开始录音");
+    set_text(content, b);
+    set_text(hint, "确定  开始录音");
   } else if (v.phase == MEMO_SETTINGS) {
     char settings[320];
     snprintf(settings, sizeof(settings),
              "热点 Passport-Memo\n密码（8位数字）\n%s\n192.168.4.1\n%s",
              v.setup_key[0] ? v.setup_key : "开启中…",
              v.portal ? "保存后按上键联网" : "长按确定开启热点");
-    lv_label_set_text(content, settings);
-    lv_label_set_text(hint, "上 / 确定  返回");
+    set_text(content, settings);
+    set_text(hint, "上 / 确定  返回");
   } else {
-    lv_label_set_text(content, v.text[0]
+    set_text(content, v.text[0]
                                    ? v.text
                                    : (v.phase == MEMO_CONNECTING
                                           ? "正在建立安全连接…\n\n准备好后再说话。"
@@ -71,7 +77,7 @@ static void update(lv_timer_t *timer) {
                v.partial                   ? "草稿"
                : v.phase == MEMO_RECORDING ? "OPUS"
                                            : "");
-    lv_label_set_text(hint, v.phase == MEMO_HISTORY_PAGE ? b
+    set_text(hint, v.phase == MEMO_HISTORY_PAGE ? b
                             : v.phase == MEMO_PLAYBACK ? "确定停止  上下音量"
                             : memo_active(v.phase) ? "确定  停止录音"
                             : v.replay_available && v.text[0] ? "确定保存 双击回放"
@@ -97,7 +103,7 @@ static void update(lv_timer_t *timer) {
     snprintf(b, sizeof(b), "双击确定回放 · %.120s", v.message);
   else
     snprintf(b, sizeof(b), "%s", v.message);
-  lv_label_set_text(caption, b);
+  set_text(caption, b);
   lv_obj_update_layout(content);
   int max_scroll = lv_obj_get_height(content) - lv_obj_get_content_height(paper);
   if (max_scroll < 0)
@@ -177,7 +183,7 @@ void memo_ui_start(void) {
   lv_obj_set_width(caption, 216);
   lv_label_set_long_mode(caption, LV_LABEL_LONG_SCROLL_CIRCULAR);
   lv_screen_load(screen);
-  lv_timer_create(update, 100, NULL);
+  lv_timer_create(update, 50, NULL);
   lv_timer_create(auto_read, 4500, NULL);
   bsp_lvgl_unlock();
 }

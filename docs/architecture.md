@@ -46,6 +46,14 @@ Opus is initialized before the TLS handshake; microphone capture waits for the r
 
 The 40 KB capture stack retained 19,604 bytes in the one measured short session; this is not proof of worst-case headroom. See [validation](validation.md). A font change, extra task or larger network buffer must be evaluated against internal RAM, not just free Flash.
 
+## Live text latency
+
+The request retains `result_type=full` and `enable_nonstream=true`, and enables `enable_accelerate_text=true` with `accelerate_score=10` (documented range 0–20). Faster initial text can be less accurate; subsequent results can revise it and second-pass recognition remains enabled. `full` means cumulative output, not waiting for the final result. Interim text is not filtered by `definite`. See the [official parameters](https://docs.volcengine.com/docs/6561/1354869?lang=zh).
+
+The UI checks state every 50 ms. Identical strings reuse LVGL's existing text, avoiding body text allocation and redraw on each 100 ms audio-level update. Following the bottom during recording, returning to the top for review and history scrolling every 4.5 seconds remain unchanged.
+
+Logs record the first nonempty result's time from sending the first actual Opus audio batch, plus changed-text and non-final-update counts, without transcript contents. This interval includes networking, recognition and initial silence. It is neither mouth-to-LCD latency nor a before/after controlled comparison.
+
 ## Latest-recording playback
 
 `memo_replay.c` owns a separate 256 KB Flash partition. `memo_replay_format.c` supplies host-testable CRC, metadata and exact sample trimming. The cache is erased before recording, then existing 40-byte Opus packets are written through a 4 KB buffer. A 120-second recording plus padding uses 240,040 bytes, with a separate 4 KB metadata sector. Metadata is committed at completion. An interrupted write or failed verification disables replay while recognized text remains saveable.

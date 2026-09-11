@@ -51,7 +51,7 @@ flowchart LR
     Browser[Local web portal] --> Notes
 ```
 
-The provider's cumulative transcript replaces the previous hypothesis. It is never appended blindly. The display checks for changes every 100 ms and follows the newest text while recording. Final results return to the top for review.
+The provider's cumulative transcript replaces the previous hypothesis. It is never appended blindly. The display checks for changes every 50 ms and follows the newest text while recording. Final results return to the top for review.
 
 See [architecture and memory budget](docs/architecture.md), [data and security](docs/security.md) and [the documentation index](docs/README.md).
 

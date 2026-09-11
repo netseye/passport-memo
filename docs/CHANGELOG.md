@@ -2,6 +2,12 @@
 
 # Changelog
 
+## First-text latency — 2026-09-11
+
+- Enable moderate first-text acceleration while retaining cumulative output and second-pass corrections; early words may be revised.
+- Check UI state every 50 ms and skip allocation/redraw for unchanged label text.
+- Log first-result timing and interim-update counts without transcript contents.
+
 ## Original-audio replay — 2026-09-11
 
 - Double-press OK on review or the latest recording's history note to replay through the built-in speaker.
