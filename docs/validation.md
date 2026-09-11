@@ -43,6 +43,8 @@ The cache-enabled build completed a **4.86-second** recording and original-audio
 
 The volume follow-up defaults to 85% and adds +6 dB playback gain with a soft limit. Tests exhaust all 16-bit PCM values for monotonicity, symmetry and overflow. Final listening quality still needs physical confirmation.
 
+The volume update preserved cached audio, identity and settings byte-for-byte. After reboot, the earlier 4.86-second clip replayed successfully. Two subsequent 6.6- and 8.2-second recording/ASR/replay cycles both returned `success=1 / partial=0` with exact output sample counts. The updated build measured a 3,496-microsecond maximum decode, 18,244-byte minimum free decoder stack and 39,680-byte minimum free heap after ASR connection. No crash was observed; the user has not yet confirmed the revised volume or distortion.
+
 ## Still to verify on hardware
 
 - A full 120-second recording and repeated start / stop / cancel / reconnect cycles.

@@ -57,7 +57,7 @@ See [architecture and memory budget](docs/architecture.md), [data and security](
 
 ## Project status
 
-**Early working version.** A real Passport completed an approximately 22-second Opus/ASR session and displayed recognized text. Host protocol, Ogg decoding, UI rendering and firmware-layout checks have passed. Original-audio replay has passed build/host checks and been installed on Passport; listening quality and the complete interaction flow are undergoing physical acceptance.
+**Early working version.** A real Passport completed an approximately 22-second Opus/ASR session and displayed recognized text. Host protocol, Ogg decoding, UI rendering and firmware-layout checks have passed. Original-audio replay has passed build/host checks, reboot cache recovery and short device sessions; listening quality after the volume fix remains to be confirmed.
 
 Long sessions, repeated connection cycles, save/reboot recovery and two-device EE04 synchronization still need physical acceptance. Read the [validation record](docs/validation.md) for exact scope.
 
