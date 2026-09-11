@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>MEMO · 语音备忘录</title>
+  <style>
+    :root {
+      --ink: #17202a;
+      --paper: #f4f4ea;
+      --sky: #1689e8;
+      --yellow: #ffd928;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font:
+        16px/1.65 system-ui,
+        -apple-system,
+        sans-serif;
+      background: var(--paper);
+    }
+    header {
+      background: var(--sky);
+      padding: 38px max(20px, calc((100vw - 880px) / 2));
+      color: white;
+      border-bottom: 5px solid var(--ink);
+    }
+    .brand {
+      font: 900 38px/1 monospace;
+      letter-spacing: 5px;
+      color: var(--ink);
+      background: var(--paper);
+      border: 3px solid var(--ink);
+      box-shadow: 5px 5px var(--ink);
+      padding: 10px 16px;
+      display: inline-block;
+    }
+    header p {
+      margin: 23px 0 0;
+    }
+    main {
+      max-width: 920px;
+      margin: auto;
+      padding: 28px 20px 70px;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    section,
+    .note {
+      border: 2px solid var(--ink);
+      box-shadow: 4px 4px var(--ink);
+      background: white;
+      padding: 22px;
+      margin-bottom: 24px;
+      border-radius: 3px;
+    }
+    h1,
+    h2,
+    h3 {
+      margin: 0 0 12px;
+      line-height: 1.3;
+    }
+    h2 {
+      font-size: 23px;
+    }
+    h3 {
+      font-size: 18px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin: 14px 0 5px;
+    }
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1.5px solid #8c969c;
+      border-radius: 4px;
+      padding: 10px;
+      background: #fcfcf8;
+      color: var(--ink);
+    }
+    input:focus,
+    textarea:focus,
+    button:focus-visible {
+      outline: 3px solid var(--sky);
+      outline-offset: 2px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 140px;
+    }
+    button {
+      border: 2px solid var(--ink);
+      box-shadow: 2px 2px var(--ink);
+      background: var(--yellow);
+      color: var(--ink);
+      padding: 9px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+    button:active {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+    }
+    button.secondary {
+      background: white;
+    }
+    button.danger {
+      color: #a53225;
+      background: #fff2eb;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+    small,
+    .muted {
+      color: #5a6570;
+      font-size: 13px;
+    }
+    .pill {
+      display: inline-block;
+      background: #e8f4fc;
+      border-radius: 20px;
+      padding: 3px 11px;
+      font-size: 13px;
+    }
+    .status {
+      position: sticky;
+      top: 12px;
+      z-index: 3;
+      background: #17202a;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      white-space: pre-wrap;
+    }
+    .status:empty {
+      display: none;
+    }
+    nav {
+      margin: 10px 0 25px;
+    }
+    nav button {
+      margin-right: 12px;
+      margin-bottom: 12px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .note {
+      padding: 18px;
+    }
+    .note header {
+      padding: 0;
+      background: none;
+      color: inherit;
+      border: 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .note .row {
+      margin-top: 14px;
+    }
+    .counter {
+      font: 13px monospace;
+      text-align: right;
+    }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .check input {
+      width: auto;
+    }
+    .empty {
+      text-align: center;
+      padding: 35px 15px;
+      color: #64707a;
+    }
+    @media (max-width: 650px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      header {
+        padding: 28px 20px;
+      }
+      section {
+        padding: 18px;
+      }
+      main {
+        padding: 24px 16px;
+      }
+      .brand {
+        font-size: 32px;
+      }
+    }
+  </style>
+  <header>
+    <span class="brand">MEMO</span>
+    <p>
+      说下灵感，留在身边。<br /><small style="color: white"
+        >AI Passport × EE04 · 语音备忘录</small
+      >
+    </p>
+  </header>
+  <main>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <section id="login">
+      <h2>连接你的备忘录</h2>
+      <p class="muted">
+        在 Passport 上长按确定键，填写屏幕显示的 8
+        位数字密码，与热点密码相同。管理窗口开放 10
+        分钟。设备重启后密码会更新，请以屏幕为准。
+      </p>
+      <form id="unlock">
+        <label for="key">管理密码</label>
+        <div class="row">
+          <input
+            id="key"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{8}"
+            maxlength="8"
+            autocomplete="off"
+            style="flex: 1; min-width: 150px"
+            required
+          /><button>连接设备</button>
+        </div>
+      </form>
+    </section>
+    <div id="app" class="hidden">
+      <nav>
+        <button id="show-notes">我的备忘录</button
+        ><button id="show-settings" class="secondary">设备设置</button
+        ><span id="connection" class="pill"></span>
+      </nav>
+      <section>
+        <h2>设备状态与使用</h2>
+        <p id="live-status" role="status" aria-live="polite">
+          正在读取网络状态…
+        </p>
+        <p class="muted">
+          Wi-Fi 名称和密码请填写路由器的；设备屏幕上的 8
+          位数字用于热点和网页登录。
+        </p>
+        <ol>
+          <li>配置保存后，按设备上键退出设置并连接路由器，热点会关闭。</li>
+          <li>网络就绪后，短按确定；看到“正在聆听”再说话。</li>
+          <li>再次短按确定结束，检查文字后按确定保存。</li>
+        </ol>
+        <p class="muted">
+          首页上下键查看历史；历史页长按上键回首页，长按确定进入设置。
+        </p>
+      </section>
+      <div id="notes-panel">
+        <div
+          class="row"
+          style="justify-content: space-between; margin-bottom: 22px"
+        >
+          <h2>灵感收件箱 <small id="count"></small></h2>
+          <button id="export" class="secondary">导出 JSON</button>
+        </div>
+        <div id="notes"></div>
+      </div>
+      <form id="settings" class="hidden">
+        <section>
+          <h2>连接与识别</h2>
+          <p class="muted">
+            配置热点不提供互联网；手机提示时请选择保持连接。保存不会关闭页面，退出设备设置后才会连接路由器。密钥留空保留原值，不会在网页中回显。
+          </p>
+          <div class="grid">
+            <div>
+              <label for="ssid">Wi-Fi 名称 · 2.4 GHz</label
+              ><input id="ssid" name="ssid" maxlength="32" required /><label
+                for="password"
+                >Wi-Fi 密码</label
+              ><input
+                id="password"
+                name="password"
+                type="password"
+                maxlength="63"
+                autocomplete="new-password"
+              /><label class="check"
+                ><input type="checkbox" name="open_wifi" />这是无密码网络</label
+              >
+            </div>
+            <div>
+              <label for="api_key">火山 API Key</label
+              ><input
+                id="api_key"
+                name="api_key"
+                type="password"
+                maxlength="256"
+                autocomplete="new-password"
+              /><small id="credential-state"></small
+              ><label for="resource">ASR 资源</label
+              ><select id="resource" name="resource">
+                <option value="volc.bigasr.sauc.duration">
+                  模型 1.0 · 小时版
+                </option>
+                <option value="volc.seedasr.sauc.duration">
+                  模型 2.0 · 小时版
+                </option>
+                <option value="volc.bigasr.sauc.concurrent">
+                  模型 1.0 · 并发版
+                </option>
+                <option value="volc.seedasr.sauc.concurrent">
+                  模型 2.0 · 并发版
+                </option>
+              </select>
+            </div>
+          </div>
+          <details style="margin-top: 18px">
+            <summary>旧版控制台凭据</summary>
+            <div class="grid">
+              <div>
+                <label for="app_id">App ID</label
+                ><input id="app_id" name="app_id" maxlength="64" />
+              </div>
+              <div>
+                <label for="access_key">Access Token</label
+                ><input
+                  id="access_key"
+                  name="access_key"
+                  type="password"
+                  maxlength="256"
+                  autocomplete="new-password"
+                />
+              </div>
+            </div>
+            <p class="muted">
+              新版 API Key 与旧版凭据二选一；已有 API Key 时优先使用它。
+            </p>
+          </details>
+          <details style="margin-top: 14px">
+            <summary>清除识别凭据</summary>
+            <label class="check"
+              ><input
+                name="clear_credentials"
+                type="checkbox"
+              />此次保存时清除全部火山凭据</label
+            >
+          </details>
+        </section>
+        <section>
+          <h2>桌面墨水屏</h2>
+          <p class="muted">
+            可选。与 EE04 连接同一 Wi-Fi，保存备忘录后直接同步。未连接时仍保存在
+            Passport，长按下键可重试。
+          </p>
+          <div class="grid">
+            <div>
+              <label for="ee04_host">EE04 的 IP 地址</label
+              ><input
+                id="ee04_host"
+                name="ee04_host"
+                maxlength="63"
+                placeholder="192.168.1.100"
+              />
+            </div>
+            <div>
+              <label for="pair_key">32 位配对码</label
+              ><input
+                id="pair_key"
+                name="pair_key"
+                type="password"
+                maxlength="32"
+                autocomplete="new-password"
+              /><small>在 EE04 管理页面启用“Passport 联动”后获取。</small>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h2>使用偏好</h2>
+          <label for="brightness">屏幕亮度</label
+          ><input
+            id="brightness"
+            name="brightness"
+            type="range"
+            min="10"
+            max="100"
+            value="75"
+          /><label class="check"
+            ><input name="sounds" type="checkbox" checked />开启提示音</label
+          >
+          <p class="muted">
+            空闲一分钟后自动调暗。录音最多 120 秒，每条最多 240 字，最多保存 32
+            条。历史满时会提示整理，不会自动删除。
+          </p>
+        </section>
+        <button id="save-settings">保存设置</button>
+      </form>
+    </div>
+  </main>
+  <script>
+    let key = "",
+      records = [];
+    const $ = (s) => document.querySelector(s);
+    function say(t) {
+      $("#status").textContent = t;
+    }
+    async function api(path, data) {
+      let r = await fetch(path, {
+        method: data ? "POST" : "GET",
+        headers: {
+          "X-Memo-Key": key,
+          ...(data ? { "Content-Type": "application/json" } : {}),
+        },
+        body: data ? JSON.stringify(data) : undefined,
+      });
+      if (!r.ok) throw Error(await r.text());
+      return r.json();
+    }
+    function updateStatus(s) {
+      $("#connection").textContent = s.portal
+        ? "配置热点已连接"
+        : s.online
+          ? s.clock_ready
+            ? "网络就绪"
+            : "正在校时"
+          : "Wi-Fi 未连接";
+      let message = s.connection_message || "正在检查网络…";
+      if (s.portal)
+        message = s.configured
+          ? "配置已齐全。保存后按设备上键退出设置，设备将连接路由器；请在设备首页查看联网结果。"
+          : "配置热点正常，请填写路由器 Wi-Fi 和火山识别凭据后保存。";
+      else if (s.online && s.clock_ready)
+        message = s.configured
+          ? "网络已就绪。请按设备上键返回首页，再按确定开始录音。"
+          : "网络已就绪，请继续填写火山识别凭据。";
+      $("#live-status").textContent = message;
+      $("#credential-state").textContent = s.has_api_key
+        ? "API Key 已保存在设备"
+        : s.has_access_key
+          ? "旧版凭据已保存在设备"
+          : "尚未配置识别凭据";
+    }
+    async function refreshStatus() {
+      if (!key || $("#app").classList.contains("hidden")) return;
+      try {
+        updateStatus(await api("/api/state"));
+      } catch (e) {
+        $("#connection").textContent = "管理连接已断开";
+        $("#live-status").textContent =
+          "管理窗口可能已关闭，或 Wi-Fi 正在切换。需要继续设置时，长按设备确定键并重新连接热点。";
+      }
+    }
+    async function load() {
+      let s = await api("/api/state");
+      updateStatus(s);
+      for (let n of ["ssid", "resource", "ee04_host", "app_id", "brightness"])
+        $("#settings").elements[n].value = s[n];
+      $("#settings").elements.sounds.checked = s.sounds;
+      records = await api("/api/notes");
+      render();
+    }
+    setInterval(() => {
+      if (!document.hidden) refreshStatus();
+    }, 3000);
+    $("#unlock").onsubmit = async (e) => {
+      e.preventDefault();
+      key = $("#key").value.trim();
+      try {
+        await load();
+        $("#login").classList.add("hidden");
+        $("#app").classList.remove("hidden");
+        say("已连接。修改后请保存。");
+      } catch (e) {
+        say(e.message);
+      }
+    };
+    function node(tag, text, cls) {
+      let n = document.createElement(tag);
+      if (text !== undefined) n.textContent = text;
+      if (cls) n.className = cls;
+      return n;
+    }
+    function render() {
+      let root = $("#notes");
+      root.replaceChildren();
+      $("#count").textContent = `${records.length} / 32`;
+      if (!records.length) {
+        root.append(
+          node(
+            "section",
+            "还没有备忘录。按设备确定键，记录第一句灵感。",
+            "empty",
+          ),
+        );
+        return;
+      }
+      for (let r of records) {
+        let card = node("article", undefined, "note"),
+          head = node("header"),
+          date = r.created
+            ? new Date(r.created * 1000).toLocaleString()
+            : "离线记录";
+        head.append(
+          node("strong", date),
+          node("span", r.partial ? "草稿" : r.done ? "已完成" : "待办", "pill"),
+        );
+        let text = node("textarea");
+        text.value = r.text;
+        text.setAttribute("aria-label", "备忘录文字");
+        let counter = node(
+          "div",
+          `${Array.from(r.text).length} / 240`,
+          "counter",
+        );
+        text.oninput = () =>
+          (counter.textContent = `${Array.from(text.value).length} / 240`);
+        let row = node("div", undefined, "row"),
+          save = node("button", "保存修改"),
+          done = node("button", r.done ? "恢复待办" : "标记完成", "secondary"),
+          remove = node("button", "删除", "danger");
+        for (let b of [save, done, remove]) b.type = "button";
+        async function edit(isDone, rm = false) {
+          if (Array.from(text.value).length > 240)
+            return say("文字超过240字，请缩短。");
+          try {
+            await api("/api/note", {
+              id: r.id,
+              text: text.value,
+              done: isDone,
+              remove: rm,
+            });
+            await load();
+            say(
+              rm ? "记录已删除" : "修改已保存；长按设备下键可重新同步墨水屏。",
+            );
+          } catch (e) {
+            say(e.message);
+          }
+        }
+        save.onclick = () => edit(r.done);
+        done.onclick = () => edit(!r.done);
+        remove.onclick = () => {
+          if (confirm("删除这条备忘录？建议先导出备份。")) edit(r.done, true);
+        };
+        row.append(save, done, remove);
+        card.append(head, text, counter, row);
+        root.append(card);
+      }
+    }
+    $("#show-notes").onclick = () => {
+      $("#notes-panel").classList.remove("hidden");
+      $("#settings").classList.add("hidden");
+      load().catch((e) => say(e.message));
+    };
+    $("#show-settings").onclick = () => {
+      $("#notes-panel").classList.add("hidden");
+      $("#settings").classList.remove("hidden");
+    };
+    $("#settings").onsubmit = async (e) => {
+      e.preventDefault();
+      let f = e.target,
+        d = Object.fromEntries(new FormData(f));
+      d.sounds = f.elements.sounds.checked;
+      d.open_wifi = f.elements.open_wifi.checked;
+      d.clear_credentials = f.elements.clear_credentials.checked;
+      d.brightness = Number(d.brightness);
+      $("#save-settings").disabled = true;
+      try {
+        await api("/api/config", d);
+        for (let n of ["password", "api_key", "access_key", "pair_key"])
+          f.elements[n].value = "";
+        f.elements.clear_credentials.checked = false;
+        say(
+          "设置已保存。请按设备上键退出设置并联网；热点随即关闭，请在设备首页查看联网结果。",
+        );
+        refreshStatus();
+      } catch (e) {
+        say(e.message);
+      } finally {
+        $("#save-settings").disabled = false;
+      }
+    };
+    $("#export").onclick = () => {
+      let url = URL.createObjectURL(
+          new Blob([JSON.stringify(records, null, 2)], {
+            type: "application/json",
+          }),
+        ),
+        a = node("a");
+      a.href = url;
+      a.download = "passport-memos.json";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+  </script>
+</html>

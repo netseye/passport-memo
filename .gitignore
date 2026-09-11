@@ -1,0 +1,29 @@
+# Generated toolchains, dependencies and build output
+build/
+managed_components/
+sdkconfig
+sdkconfig.old
+.ccache/
+.cache/
+.venv/
+node_modules/
+__pycache__/
+*.py[cod]
+*.ppm
+*.bin
+*.elf
+*.map
+*.log
+*.zip
+# Local configuration and device data
+.env
+.env.*
+!.env.example
+backups/
+*-private-*
+*-private.*
+secrets/
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
