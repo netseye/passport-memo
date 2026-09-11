@@ -13,7 +13,7 @@ Recorded on **2026-09-11**, updated **2026-09-12**. Build and host tests are rep
 - Actual LVGL UI rendered on the host, including all nine phases with 240-character text. Prior measured peak: 29,336 / 40,960 bytes.
 - EE04 host tests: content/image/refresh behavior, nonce expiry, replay handling, rollover and signing bytes. EE04 firmware compiles separately for XIAO ESP32-S3.
 
-Published-source build: Passport application **2,100,416 bytes / 3,145,728 limit**, merged image **2,165,952 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
+Published-source build: Passport application **2,100,368 bytes / 3,145,728 limit**, merged image **2,165,904 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
 
 ## Real Passport session
 

@@ -2,6 +2,10 @@
 
 # Changelog
 
+## Simpler setup labels — 2026-09-12
+
+- Remove the password-length hint from the device setup screen and portal copy, keeping the password display and login behavior intact.
+
 ## Note header spacing — 2026-09-12
 
 - Separate the date/status row from the text field by 12 px, center the items and allow wrapping on narrow screens.
