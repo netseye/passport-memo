@@ -14,8 +14,8 @@ static int scroll_y;
 static const char *phase_name(memo_phase_t p) {
   static const char *names[] = {"灵感收件箱", "正在连接",     "正在聆听",
                                 "正在整理",   "确认这条备忘", "我的备忘录",
-                                "设备设置",   "暂时遇到问题"};
-  return p <= MEMO_ERROR ? names[p] : "";
+                                "设备设置",   "暂时遇到问题", "原声回放"};
+  return p <= MEMO_PLAYBACK ? names[p] : "";
 }
 static void update(lv_timer_t *timer) {
   (void)timer;
@@ -72,10 +72,17 @@ static void update(lv_timer_t *timer) {
                : v.phase == MEMO_RECORDING ? "OPUS"
                                            : "");
     lv_label_set_text(hint, v.phase == MEMO_HISTORY_PAGE ? b
-                            : memo_active(v.phase)       ? "确定  停止录音"
-                                                         : "确定  保存备忘");
+                            : v.phase == MEMO_PLAYBACK ? "确定停止  上下音量"
+                            : memo_active(v.phase) ? "确定  停止录音"
+                            : v.replay_available && v.text[0] ? "确定保存 双击回放"
+                            : v.replay_available ? "双击确定 回放原声"
+                            : v.text[0] ? "确定  保存备忘" : "长按上键 返回");
   }
-  if (memo_active(v.phase))
+  if (v.phase == MEMO_PLAYBACK)
+    snprintf(b, sizeof(b), "%02u:%02u / %02u:%02u  音量 %u%%",
+             v.playback_seconds / 60, v.playback_seconds % 60,
+             v.playback_total / 60, v.playback_total % 60, v.playback_volume);
+  else if (memo_active(v.phase))
     snprintf(b, sizeof(b), "%02lu:%02lu  %s", (unsigned long)v.seconds / 60,
              (unsigned long)v.seconds % 60,
              v.phase == MEMO_RECORDING   ? "OPUS · 16k"
@@ -86,6 +93,8 @@ static void update(lv_timer_t *timer) {
     snprintf(b, sizeof(b), "%s", memo_link_message(v.link));
   else if (v.phase == MEMO_SETTINGS && v.configured)
     snprintf(b, sizeof(b), "保存后按上键返回并联网");
+  else if (v.phase == MEMO_HISTORY_PAGE && v.replay_available)
+    snprintf(b, sizeof(b), "双击确定回放 · %.120s", v.message);
   else
     snprintf(b, sizeof(b), "%s", v.message);
   lv_label_set_text(caption, b);
@@ -100,14 +109,15 @@ static void update(lv_timer_t *timer) {
   lv_obj_set_y(content, -scroll_y);
   for (int i = 0; i < 18; i++) {
     int h = 3;
-    if (v.phase == MEMO_RECORDING)
+    if (v.phase == MEMO_RECORDING || v.phase == MEMO_PLAYBACK)
       h = 3 + v.level * (4 + (i * 7) % 13) / 70;
     if (h > 24)
       h = 24;
     lv_obj_set_height(bars[i], h);
     lv_obj_set_y(bars[i], 238 - h / 2);
     lv_obj_set_style_bg_color(
-        bars[i], lv_color_hex(v.phase == MEMO_RECORDING ? UI_YELLOW : UI_PAPER), 0);
+        bars[i], lv_color_hex(v.phase == MEMO_RECORDING || v.phase == MEMO_PLAYBACK
+                                  ? UI_YELLOW : UI_PAPER), 0);
   }
 }
 void memo_ui_scroll(int direction) {

@@ -13,6 +13,7 @@ build/ui-preview/memo_preview 0 build/home.ppm
 build/ui-preview/memo_preview 2 build/recording.ppm
 build/ui-preview/memo_preview 4 build/review.ppm
 build/ui-preview/memo_preview 6 build/settings.ppm
+build/ui-preview/memo_preview 8 build/playback.ppm
 ```
 
 状态编号对应 `main/memo_core.h` 中的 `memo_phase_t`。设置 `MEMO_PREVIEW_MAX_TEXT=1` 可使用 240 字内存压力数据，渲染器会打印 LVGL 堆占用。

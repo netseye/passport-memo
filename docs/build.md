@@ -31,8 +31,9 @@ Start with a new build directory when moving from older defaults. Existing sdkco
 | factory | `0x10000` | `0x300000` | Application, at most 3 MB |
 | cardid | `0x356000` | `0x4000` | Protected factory identity; never overwrite |
 | memo | `0x360000` | `0x30000` | Device settings, notes and draft |
+| replay | `0x390000` | `0x40000` | Latest Opus recording; separate from NVS |
 
-Confirm the target chip and 8 MB Flash before installation. Back up all Flash privately and check that existing data after `cardid` can accommodate the new `memo` partition. Never run `erase-flash` on a provisioned Passport.
+Confirm the target chip and 8 MB Flash before installation. Back up all Flash privately and check that existing data after `cardid` can accommodate the new `memo` and `replay` partitions. Never run `erase-flash` on a provisioned Passport.
 
 ```sh
 # Replace this placeholder with the verified Passport port.
@@ -62,3 +63,5 @@ MEMO_PREVIEW_MAX_TEXT=1 build/ui-preview/memo_preview 4 build/review-max.ppm
 [Preview fixtures and image generation](../tests/ui_preview/README.md) use no real device data. Generated firmware, caches and backups are ignored by Git.
 
 CI runs the same gates on pushes and pull requests. It uploads the merged development image but never flashes a device, creates a tag or publishes a release. [EE04 uses a separate Arduino build](../companion/ee04/README.md); never interchange the two boards' binaries.
+
+Upgrading for replay requires both the partition table and application. Flashing only the app leaves ASR available but disables caching/playback. Do not erase `memo` or `cardid`.

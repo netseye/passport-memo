@@ -14,8 +14,9 @@ typedef struct {
   memo_link_state_t link;
   char text[MEMO_TEXT_BYTES], message[160], ip[48], setup_key[9];
   uint32_t revision, seconds, selected_id;
+  unsigned playback_seconds, playback_total, playback_volume;
   int count, selected, battery, level;
-  bool online, configured, portal, done, synced, partial, audio_ok;
+  bool online, configured, portal, done, synced, partial, audio_ok, replay_available;
 } memo_view_t;
 void memo_app_start(bool audio_ok, bool battery_ok);
 void memo_key(bsp_btn_t key, bsp_btn_ev_t event, void *user);

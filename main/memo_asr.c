@@ -13,6 +13,7 @@
 #include "freertos/task.h"
 #include "memo_app.h"
 #include "memo_ogg.h"
+#include "memo_replay.h"
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -230,6 +231,7 @@ static void capture(void *arg) {
     if (encode_us > encode_max)
       encode_max = encode_us;
     encoded_frames++;
+    memo_replay_append(raw, out.encoded_bytes, padding ? 0 : PCM_BYTES / 2);
     granule += 960;
     size_t n =
         memo_ogg_page(chunk->data + chunk->size, sizeof(chunk->data) - chunk->size, raw,
@@ -285,6 +287,7 @@ void memo_asr_run(const memo_config_t *config) {
   transcript[0] = failure[0] = 0;
   memset(&stream, 0, sizeof(stream));
   limited = false;
+  memo_replay_begin();
   events = xEventGroupCreate();
   audio_queue = NULL;
   rx = NULL;
@@ -447,6 +450,7 @@ cleanup:
   if (events)
     vEventGroupDelete(events);
   events = NULL;
+  memo_replay_finish(transcript);
   bool partial = !successful || limited;
   ESP_LOGI("memo", "ASR finished: success=%d text_bytes=%u partial=%d heap=%lu",
            successful, (unsigned)strlen(transcript), partial,

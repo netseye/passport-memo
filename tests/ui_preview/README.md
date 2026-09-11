@@ -13,6 +13,7 @@ build/ui-preview/memo_preview 0 build/home.ppm
 build/ui-preview/memo_preview 2 build/recording.ppm
 build/ui-preview/memo_preview 4 build/review.ppm
 build/ui-preview/memo_preview 6 build/settings.ppm
+build/ui-preview/memo_preview 8 build/playback.ppm
 ```
 
 Phase numbers follow `memo_phase_t` in `main/memo_core.h`. Set `MEMO_PREVIEW_MAX_TEXT=1` for a 240-character memory stress fixture. The renderer reports LVGL heap usage.

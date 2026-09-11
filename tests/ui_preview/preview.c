@@ -31,13 +31,17 @@ int main(int argc, char **argv) {
   view.count = 6;
   view.level = 64;
   view.seconds = 12;
+  view.replay_available = true;
+  view.playback_seconds = 5;
+  view.playback_total = 12;
+  view.playback_volume = 85;
   view.selected_id = 1;
   strcpy(view.message,
          view.phase == MEMO_REVIEW ? "识别完成，确定保存" : "按确定，说下你的灵感");
   strcpy(view.setup_key, "12345678");
   strcpy(view.ip, "http://192.168.1.100");
   if (view.phase == MEMO_RECORDING || view.phase == MEMO_REVIEW ||
-      view.phase == MEMO_HISTORY_PAGE)
+      view.phase == MEMO_HISTORY_PAGE || view.phase == MEMO_PLAYBACK)
     strcpy(view.text, "今天的灵感：做一个不用打开手机，也能随时记录想法的小伙伴"
                       "。说完就能留在桌面的墨水屏上。");
   if (getenv("MEMO_PREVIEW_MAX_TEXT")) {

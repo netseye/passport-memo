@@ -35,7 +35,7 @@ def device(canvas, screen, x, y, scale=1):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     screens = {}
-    for name, phase in (("home", 0), ("recording", 2), ("review", 4), ("settings", 6)):
+    for name, phase in (("home", 0), ("recording", 2), ("review", 4), ("settings", 6), ("playback", 8)):
         ppm = BUILD / f"{name}.ppm"
         subprocess.run([str(BUILD / "memo_preview"), str(phase), str(ppm)], check=True)
         screens[name] = Image.open(ppm).convert("RGB")
@@ -61,6 +61,12 @@ def main():
         draw.text((x, 12), label, font=font(17), fill=INK)
         device(flow, screens[name], x, 49)
     flow.save(OUT / "recording-flow.png")
+    replay = Image.new("RGB", (930, 445), PAPER)
+    draw = ImageDraw.Draw(replay)
+    for name, label, x in (("review", "DOUBLE OK: REPLAY", 22), ("playback", "UP / DOWN: VOLUME", 333), ("review", "OK: STOP, THEN SAVE", 644)):
+        draw.text((x, 12), label, font=font(17), fill=INK)
+        device(replay, screens[name], x, 49)
+    replay.save(OUT / "playback-flow.png")
     print(f"Documentation images: {OUT}")
 
 

@@ -17,11 +17,12 @@ Turn the FoloToy AI Passport into a pocket voice notebook. Its ESP32-C3 records 
 
 - Live Chinese transcription with a pixel UI, microphone levels, battery status and automatic text wrapping.
 - Review before saving, retain an unsaved draft, browse up to **32 notes**, and mark notes complete.
+- Double-press OK to replay the latest recording; UP/DOWN changes volume and OK stops. Replay remains available on its saved history note.
 - A local web portal for Wi-Fi / ASR setup, note editing, deletion and JSON export.
 - **16 kbps Opus** on the device: roughly **3.4 KB/s Ogg payload**, excluding WebSocket/TLS overhead.
 - Optional signed text synchronization to an **EE04 e-paper display** on the same LAN.
 
-Limits: **120 seconds / 240 Unicode characters per session**. No audio files are saved. Speech recognition requires internet access and an enabled Volcengine resource. The device interface currently uses Simplified Chinese.
+Limits: **120 seconds / 240 Unicode characters per session**. Flash caches only the latest recording for offline playback. Speech recognition requires internet access and an enabled Volcengine resource. The device interface currently uses Simplified Chinese.
 
 ## Get started
 
@@ -42,6 +43,8 @@ flowchart LR
     Mic[Passport microphone] --> PCM[16 kHz mono PCM]
     PCM --> Opus[On-device Opus + Ogg]
     Opus -->|WSS / TLS| ASR[Volcengine ASR]
+    Opus --> Cache[Latest recording in Flash]
+    Cache --> Speaker[Local decode and speaker replay]
     ASR -->|Full transcript| Review[Screen / review]
     Review -->|Confirm| Notes[Local NVS notes]
     Notes -. optional signed LAN HTTP .-> EE04[EE04 e-paper]
@@ -54,7 +57,7 @@ See [architecture and memory budget](docs/architecture.md), [data and security](
 
 ## Project status
 
-**Early working version.** A real Passport completed an approximately 22-second Opus/ASR session and displayed recognized text. Host protocol, Ogg decoding, UI rendering and firmware-layout checks have passed. The source also contains later error-message improvements and publishing cleanup; those changes have not been flashed for another device test.
+**Early working version.** A real Passport completed an approximately 22-second Opus/ASR session and displayed recognized text. Host protocol, Ogg decoding, UI rendering and firmware-layout checks have passed. Original-audio replay has passed build/host checks and been installed on Passport; listening quality and the complete interaction flow are undergoing physical acceptance.
 
 Long sessions, repeated connection cycles, save/reboot recovery and two-device EE04 synchronization still need physical acceptance. Read the [validation record](docs/validation.md) for exact scope.
 

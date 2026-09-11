@@ -32,6 +32,14 @@ run_static_checks() {
         tests/test_memo_core.c main/memo_core.c main/memo_ogg.c \
         -o "${test_dir}/test_memo_core"
     "${test_dir}/test_memo_core"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
+        tests/test_memo_replay.c main/memo_replay_format.c \
+        -o "${test_dir}/test_memo_replay"
+    "${test_dir}/test_memo_replay"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
+        tests/test_memo_playback_pcm.c main/memo_playback_pcm.c \
+        -o "${test_dir}/test_memo_playback_pcm"
+    "${test_dir}/test_memo_playback_pcm"
     python3 tests/test_verify_firmware.py
     rm -rf "${test_dir}"
     ./companion/ee04/tests/run.sh

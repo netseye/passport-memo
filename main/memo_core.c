@@ -103,7 +103,8 @@ bool memo_response(const uint8_t *d, size_t n, memo_packet_t *p) {
   return true;
 }
 bool memo_active(memo_phase_t p) {
-  return p == MEMO_CONNECTING || p == MEMO_RECORDING || p == MEMO_FINISHING;
+  return p == MEMO_CONNECTING || p == MEMO_RECORDING || p == MEMO_FINISHING ||
+         p == MEMO_PLAYBACK;
 }
 bool memo_header_value(const char *s, size_t max_len) {
   if (!s || strlen(s) > max_len)

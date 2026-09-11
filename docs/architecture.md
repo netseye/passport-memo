@@ -45,3 +45,13 @@ There is no reconnect/replay queue. An interruption keeps recognized text for re
 Opus is initialized before the TLS handshake; microphone capture waits for the recognition request to succeed. Wi-Fi fast paths use Flash instead of IRAM. IPv6, Bluetooth and TLS renegotiation are disabled. Dynamic TLS buffers release configuration and peer-certificate storage; server certificate validation and time synchronization stay enabled. Do not replace these defaults with a generic C3 profile.
 
 The 40 KB capture stack retained 19,604 bytes in the one measured short session; this is not proof of worst-case headroom. See [validation](validation.md). A font change, extra task or larger network buffer must be evaluated against internal RAM, not just free Flash.
+
+## Latest-recording playback
+
+`memo_replay.c` owns a separate 256 KB Flash partition. `memo_replay_format.c` supplies host-testable CRC, metadata and exact sample trimming. The cache is erased before recording, then existing 40-byte Opus packets are written through a 4 KB buffer. A 120-second recording plus padding uses 240,040 bytes, with a separate 4 KB metadata sector. Metadata is committed at completion. An interrupted write or failed verification disables replay while recognized text remains saveable.
+
+Drafts match a SHA-256 text digest; saving binds the cache to the note ID. Editing text retains the original audio and deleting the note clears it. Boot restores metadata and playback verifies the full payload CRC. Decoding removes the 104-sample pre-skip at 16 kHz and final padding, ending at the actual sample count.
+
+`MEMO_PLAYBACK` marks configuration and record writes busy. A double press invokes replay; single presses retain existing actions. Button callbacks only change atomic stop/volume values. A temporary 24 KB decoder stack is created after encoder and TLS cleanup; the task serializes audio output, fills silence, then waits for I2S DMA to drain. The 4 KB static buffer is reused for verification; no full PCM recording is retained. Volume defaults to 85%, ranges from 10–100%, and changes by 5% per press. It resets on boot without changing the persisted NVS config layout.
+
+`memo_playback_pcm.c` processes decoded playback PCM only: quiet samples receive 2× gain (about +6 dB), with a continuous soft knee above magnitude 24,000 approaching 32,000 without signed overflow. Tests exhaust the full 16-bit input range for monotonicity, symmetry and bounds. Stored Opus and uploaded audio remain unchanged. The ES8311 default volume curve maps 65% to −17.5 dB and 85% to −7.5 dB; the new default removes 10 dB of output attenuation.

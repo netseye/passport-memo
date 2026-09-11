@@ -8,11 +8,12 @@ Recorded on **2026-09-11**. Build and host tests are reproducible through [the b
 
 - Fresh ESP-IDF 5.5.3 / ESP32-C3 build, app-size limit, partition-table integrity and protected identity checks.
 - UTF-8 limits, ASR binary framing, fragmented WebSocket reconstruction, connection/service-error classification and Ogg CRC/page tests.
+- Replay cache: standard CRC32 vector, corrupt/truncated metadata, exact pre-skip/padding removal, 120-second bounds and protected storage partition placement.
 - Host libopus + firmware muxer + FFmpeg: 20 / 100 / 1,000 ms streams, exact decoded duration and EOS.
-- Actual LVGL UI rendered on the host, including all eight phases with 240-character text. Prior measured peak: 29,184 / 40,960 bytes.
+- Actual LVGL UI rendered on the host, including all nine phases with 240-character text. Prior measured peak: 29,336 / 40,960 bytes.
 - EE04 host tests: content/image/refresh behavior, nonce expiry, replay handling, rollover and signing bytes. EE04 firmware compiles separately for XIAO ESP32-S3.
 
-Published-source build: Passport application **2,047,616 bytes / 3,145,728 limit**, merged image **2,113,152 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
+Published-source build: Passport application **2,089,792 bytes / 3,145,728 limit**, merged image **2,155,328 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
 
 ## Real Passport session
 
@@ -29,7 +30,18 @@ Hardware: ESP32-C3, 8 MB Flash, no PSRAM. Credentials: legacy App ID + Access To
 
 The highest individual encode time exceeded one 20 ms frame; the session nevertheless completed. This short measurement does not establish sustained worst-case performance or recognition accuracy. Low-level close warnings were observed after completion; repeat-session behavior remains to be checked.
 
-The installed version includes the C3 memory fixes. Later service-error explanations, formatting, source organization and build-name cleanup in this repository have **not** been reflashed for a new hardware run. CI artifacts are development builds, not a claim of device acceptance.
+The replay and publishing-cleanup build is now installed on Passport. Application/table readback matched, identity and the entire `memo` store were byte-for-byte unchanged, and boot showed no crash. Listening quality and the complete interaction flow remain under acceptance; the older short-session figures do not measure the new cache writes. CI artifacts remain development builds.
+
+## Original-audio replay test
+
+The cache-enabled build completed a **4.86-second** recording and original-audio playback with ASR `success=1 / partial=0`. The user heard audio but reported low initial volume. Its 244 Opus frames (including padding) occupied 9,760 bytes; replay emitted 77,760 samples, matching the captured duration.
+
+- Encoder mean / maximum: 10,285 / 18,308 microseconds; capture stack minimum free 19,604 bytes.
+- Maximum cache write: 4,807 microseconds; free heap after ASR connection 40,044 bytes.
+- Maximum decode: 2,478 microseconds; decoder stack minimum free 18,244 bytes; normal completion without a crash.
+- The actual cache also passed host libopus decoding and CRC checks. No audio or transcript is published.
+
+The volume follow-up defaults to 85% and adds +6 dB playback gain with a soft limit. Tests exhaust all 16-bit PCM values for monotonicity, symmetry and overflow. Final listening quality still needs physical confirmation.
 
 ## Still to verify on hardware
 

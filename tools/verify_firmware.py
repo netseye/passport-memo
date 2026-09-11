@@ -83,6 +83,8 @@ def verify_protected_layout(merged: bytes, build_dir: Path) -> None:
     expected = {
         "factory": Partition(0, 0, 0x10000, APP_MAX_SIZE, "factory"),
         "cardid": Partition(1, 2, CARDID_OFFSET, CARDID_SIZE, "cardid"),
+        "memo": Partition(1, 2, 0x360000, 0x30000, "memo"),
+        "replay": Partition(1, 0x40, 0x390000, 0x40000, "replay"),
     }
     for label, wanted in expected.items():
         if by_label.get(label) != wanted:

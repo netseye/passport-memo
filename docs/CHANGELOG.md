@@ -2,6 +2,15 @@
 
 # Changelog
 
+## Original-audio replay — 2026-09-11
+
+- Double-press OK on review or the latest recording's history note to replay through the built-in speaker.
+- Playback progress, audio levels and volume; UP/DOWN adjusts volume and OK stops.
+- Default replay volume 85%, adjustable to 100%; +6 dB software gain and soft limiting improve quiet playback.
+- Separate Flash cache for one Opus recording up to 120 seconds, bound to its saved note and restorable after reboot.
+- Integrity verification and exact removal of encoder delay/padding; existing credentials and note NVS layouts remain unchanged.
+- Illustrated replay instructions, corrupt-cache tests and storage-layout checks.
+
 ## Initial public version — 2026-09-11
 
 - Direct Volcengine streaming ASR with on-device 16 kbps Opus/Ogg.

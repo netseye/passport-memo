@@ -45,7 +45,17 @@ Press **OK**, wait for the listening page, then speak. Press **OK** again to sto
 
 While speaking, the text may revise earlier words or punctuation. Full results replace the preceding text and follow the bottom of the page. Review starts at the top. This is speech transcription; there is no additional LLM rewriting or summary.
 
-## 4. Read and organize notes
+## 4. Replay the original recording
+
+![Replay and volume controls](images/playback-flow.png)
+
+*Actual UI rendered on the host with sample text.*
+
+After recording, **double-press OK quickly** on the review page to replay. During playback, **UP/DOWN** adjusts volume in 5% steps and **OK** stops. Playback returns to the previous page; press OK once to save the text. The screen shows progress, volume and audio levels. The sound-feedback setting controls cues, not replay.
+
+Only the **latest recording**, up to 120 seconds, is retained. Its saved history note displays a double-press replay hint. Text edits leave the original audio intact. Playback works offline and a completed cache survives reboot. Starting the next recording clears the previous audio, even if connecting subsequently fails. Deleting its note also clears the cache. Older notes retain text only, and JSON export excludes audio. If audio was captured without recognized text, double-press OK on the error page to listen.
+
+## 5. Read and organize notes
 
 Home UP/DOWN opens history. In history, UP/DOWN selects another note; long text scrolls by 72 pixels every 4.5 seconds. OK toggles completion. Hold UP to return Home.
 
@@ -59,10 +69,11 @@ The web portal edits, deletes and exports notes as JSON. JSON import is not impl
 | Connecting / recording / finishing | — | Stop | — | — | Cancel, retaining recognized text |
 | Review / error | Scroll text | Save nonempty text | Home; retain draft | — | Settings |
 | History | Previous / next | Toggle completed | Home | Retry EE04 sync | Settings |
+| Playback | Volume ±5% | Stop playback | — | — | Stop playback |
 | Settings | UP exits | Exit | — | — | Extend setup window |
 
 ## Storage and limits
 
-Each session is limited to 120 seconds or 240 Unicode code points, whichever is reached first. Finalized sessions with text retain one unsaved draft in Flash. Hold UP from Home or reboot to recover it. A newer nonempty draft replaces the earlier one. Sudden power loss during active recording can lose that session, because audio is not saved and the draft is written when the session ends.
+Each session is limited to 120 seconds or 240 Unicode code points, whichever is reached first. Finalized sessions with text retain one unsaved draft in Flash. Hold UP from Home or reboot to recover it. A newer nonempty draft replaces the earlier one. Sudden power loss during active recording can lose that session, because the draft and valid audio-cache metadata are committed at session completion. Incomplete caches are not replayed.
 
 The font covers GB2312 and selected punctuation (7,687 glyphs). Other valid Unicode is preserved in storage/export but may display as a missing glyph. Idle backlight dims after one minute; button activity restores it. Battery display depends on an available gauge.

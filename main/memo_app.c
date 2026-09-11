@@ -1,4 +1,5 @@
 #include "memo_app.h"
+#include "memo_replay.h"
 #include "bsp_audio.h"
 #include "bsp_battery.h"
 #include "bsp_display.h"
@@ -56,6 +57,11 @@ static bool write_record(const memo_record_t *r) {
   return storage_ok && nvs_set_blob(db, key, r, sizeof(*r)) == ESP_OK &&
          nvs_commit(db) == ESP_OK;
 }
+/* Caller holds the application lock. Persisted note/config layouts stay fixed. */
+static void refresh_replay(void) {
+  uint32_t id = view.phase == MEMO_HISTORY_PAGE ? view.selected_id : 0;
+  view.replay_available = view.audio_ok && memo_replay_matches(view.text, id);
+}
 static void select_record(void) {
   memo_record_t r;
   if (view.count && read_record(ids[view.selected], &r)) {
@@ -65,10 +71,12 @@ static void select_record(void) {
     view.done = r.done;
     view.synced = r.synced;
     view.partial = r.partial;
+    refresh_replay();
     msg(r.synced ? "已同步到墨水屏" : "保存在本机");
   } else {
     view.text[0] = 0;
     view.selected_id = 0;
+    view.replay_available = false;
     msg("还没有备忘录");
   }
 }
@@ -175,6 +183,7 @@ bool memo_record_edit(uint32_t id, const char *text, bool done, bool remove) {
     record_key(key, id);
     ok = nvs_erase_key(db, key) == ESP_OK && nvs_commit(db) == ESP_OK;
     if (ok) {
+      memo_replay_forget(id);
       for (int i = 0; i < view.count; i++)
         if (ids[i] == id) {
           memmove(ids + i, ids + i + 1, (view.count - i - 1) * sizeof(*ids));
@@ -215,14 +224,24 @@ void memo_asr_update(memo_phase_t p, const char *text, const char *message,
 }
 void memo_key(bsp_btn_t key, bsp_btn_ev_t ev, void *user) {
   (void)user;
-  if (ev != BSP_BTN_CLICK && ev != BSP_BTN_LONG)
+  if (ev != BSP_BTN_CLICK && ev != BSP_BTN_LONG && ev != BSP_BTN_DOUBLE)
     return;
-  if (memo_active(atomic_load(&phase))) {
+  memo_phase_t p = atomic_load(&phase);
+  if (p == MEMO_PLAYBACK) {
+    if (key == BSP_BTN_OK)
+      memo_replay_stop();
+    else if (ev == BSP_BTN_CLICK)
+      memo_replay_volume_step(key == BSP_BTN_UP ? 5 : -5);
+    return;
+  }
+  if (memo_active(p)) {
     if (key == BSP_BTN_OK)
       memo_asr_stop(ev == BSP_BTN_LONG);
     return;
   }
-  int command = (int)key + (ev == BSP_BTN_LONG ? 10 : 0);
+  if (ev == BSP_BTN_DOUBLE && key != BSP_BTN_OK)
+    return;
+  int command = (int)key + (ev == BSP_BTN_LONG ? 10 : ev == BSP_BTN_DOUBLE ? 20 : 0);
   xQueueSend(keys, &command, 0);
 }
 static void sound(void) {
@@ -240,6 +259,10 @@ static void sound(void) {
   }
   bsp_audio_set_volume(35);
   bsp_audio_write(pcm, sizeof(pcm));
+  memset(pcm, 0, sizeof(pcm));
+  for (unsigned i = 0; i < 3; i++)
+    bsp_audio_write(pcm, sizeof(pcm));
+  vTaskDelay(pdMS_TO_TICKS(100));
 }
 static void save_draft(void) {
   take();
@@ -284,6 +307,8 @@ static void save_current(void) {
     give();
     return;
   }
+  if (memo_replay_matches(view.text, 0))
+    memo_replay_bind(r.id);
   memmove(ids + 1, ids, view.count * sizeof(*ids));
   ids[0] = r.id;
   view.count++;
@@ -308,11 +333,45 @@ static void save_current(void) {
     give();
   }
 }
+static void playback_progress(unsigned seconds, unsigned total, int level) {
+  take();
+  view.phase = MEMO_PLAYBACK;
+  view.playback_seconds = seconds;
+  view.playback_total = total;
+  view.playback_volume = memo_replay_volume();
+  view.level = level;
+  changed();
+  give();
+}
 static void process(int k) {
   take();
   last_activity = (uint32_t)(esp_timer_get_time() / 1000);
   bsp_display_backlight(config.brightness);
   memo_phase_t p = view.phase;
+  if (k == 22 && (p == MEMO_REVIEW || p == MEMO_ERROR || p == MEMO_HISTORY_PAGE)) {
+    refresh_replay();
+    if (!view.replay_available) {
+      msg("这条没有原声；仅保留最近一段录音");
+      give();
+      return;
+    }
+    // Mark busy before releasing the lock so HTTP edits cannot race playback.
+    view.phase = MEMO_PLAYBACK;
+    changed();
+    give();
+    esp_err_t result = memo_replay_play(playback_progress);
+    take();
+    view.phase = p;
+    view.level = 0;
+    last_activity = (uint32_t)(esp_timer_get_time() / 1000);
+    refresh_replay();
+    msg(result == ESP_OK ? "回放结束，可再次双击确定播放"
+        : result == ESP_ERR_INVALID_STATE ? "已停止回放"
+        : result == ESP_ERR_NO_MEM ? "回放内存不足，请重启后重试"
+                                  : "原声读取失败，文字仍保留");
+    give();
+    return;
+  }
   if (k == 12) {
     view.phase = MEMO_SETTINGS;
     msg("连接屏幕热点，打开 192.168.4.1");
@@ -328,6 +387,7 @@ static void process(int k) {
         view.phase = MEMO_REVIEW;
         view.seconds = 0;
         view.partial = true;
+        refresh_replay();
         msg("草稿已恢复，确定保存");
       } else {
         view.text[0] = 0;
@@ -361,12 +421,17 @@ static void process(int k) {
       view.text[0] = 0;
       view.seconds = 0;
       view.partial = false;
+      view.replay_available = false;
       view.phase = MEMO_CONNECTING;
       changed();
       give();
       memo_portal_stop();
       sound();
       memo_asr_run(&c);
+      take();
+      refresh_replay();
+      changed();
+      give();
       save_draft();
       return;
     }
@@ -463,6 +528,7 @@ void memo_app_start(bool audio_ok, bool battery_ok) {
   have_battery = battery_ok;
   view.battery = battery_ok ? bsp_battery_soc() : -1;
   view.audio_ok = audio_ok;
+  memo_replay_init();
   view.phase = MEMO_HOME;
   config.sounds = true;
   config.brightness = 75;
@@ -521,6 +587,7 @@ void memo_app_start(bool audio_ok, bool battery_ok) {
     view.audio_ok = false;
     msg("音频格式初始化失败，请重启检查");
   }
+  refresh_replay();
   memo_ui_start();
   if (!configured()) {
     take();

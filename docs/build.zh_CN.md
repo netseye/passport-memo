@@ -31,8 +31,9 @@ idf.py -B build/device -D SDKCONFIG=build/device/sdkconfig build
 | factory | `0x10000` | `0x300000` | 应用，最多 3 MB |
 | cardid | `0x356000` | `0x4000` | 受保护的出厂身份，不得覆盖 |
 | memo | `0x360000` | `0x30000` | 配置、备忘录与草稿 |
+| replay | `0x390000` | `0x40000` | 最近一段 Opus 原声 |
 
-安装前核实芯片与 8 MB Flash，私下备份完整 Flash，并检查原有 `cardid` 之后的数据布局是否允许增加 `memo` 分区。已写入出厂身份的 Passport 不要执行 `erase-flash`。
+安装前核实芯片与 8 MB Flash，私下备份完整 Flash，并检查原有 `cardid` 之后的数据布局是否允许增加 `memo` 和 `replay` 分区。已写入出厂身份的 Passport 不要执行 `erase-flash`。
 
 ```sh
 # 替换为已核实的 Passport 串口。
@@ -62,3 +63,5 @@ MEMO_PREVIEW_MAX_TEXT=1 build/ui-preview/memo_preview 4 build/review-max.ppm
 [预览数据与图片生成](../tests/ui_preview/README.zh_CN.md)不使用真实设备数据。固件、缓存和备份均被 Git 忽略。
 
 CI 在推送及 Pull Request 上运行相同检查，上传合并开发镜像，不会刷机、打标签或自动发布 Release。[EE04 使用独立 Arduino 构建](../companion/ee04/README.zh_CN.md)，不能混刷两块板的固件。
+
+升级原声回放版本时需同时更新分区表和应用；只刷应用会继续识别，但无法缓存或回放。不要擦除 `memo` 或 `cardid`。

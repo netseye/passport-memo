@@ -104,6 +104,9 @@ int main(void) {
   assert(n == 99 && !memcmp(out, "OggS", 4) && out[5] == 2 &&
          !memcmp(out + 28, "OpusHead", 8));
   assert(!memcmp(out + 47, "OggS", 4) && !memcmp(out + 75, "OpusTags", 8));
+  assert(memo_active(MEMO_PLAYBACK));
+  assert(memo_active(MEMO_CONNECTING) && memo_active(MEMO_RECORDING) && memo_active(MEMO_FINISHING));
+  assert(!memo_active(MEMO_REVIEW) && !memo_active(MEMO_HISTORY_PAGE));
   puts("Memo protocol, UTF-8 and Ogg boundary tests: PASS");
   return 0;
 }

@@ -2,9 +2,9 @@
 
 # Data and security
 
-Audio is held in RAM, encoded on Passport and sent directly to Volcengine over certificate-validated TLS. The firmware does not store audio files or send speech through an EE04 or self-hosted server. Provider-side handling is governed by your Volcengine service settings and terms.
+Passport encodes audio and sends it directly to Volcengine over certificate-validated TLS. A separate `replay` Flash partition retains the latest compressed Opus recording for offline speaker playback. A new recording or deletion of its note clears the previous cache. Audio is excluded from JSON export and is not relayed through EE04 or a self-hosted server. Provider-side handling is governed by your Volcengine service settings and terms.
 
-Wi-Fi credentials, ASR credentials, notes and one finalized draft are stored in the device's `memo` NVS partition. This build does not enable Flash encryption. Physical Flash access or a backup can expose that data. Configuration is entered after flashing; no account credentials are embedded in the source or distributable image.
+Wi-Fi credentials, ASR credentials, notes and one finalized draft are stored in the device's `memo` NVS partition. This build does not enable Flash encryption. Physical Flash access or a backup can expose credentials, text and cached audio. The audio CRC detects corruption; it provides neither encryption nor authentication. Configuration is entered after flashing; no account credentials are embedded in the source or distributable image.
 
 Setup requires physical access to hold OK. A ten-minute WPA2 hotspot and local HTTP portal use the current boot's random eight-digit code. The portal does not echo saved secrets; empty secret inputs preserve them. Use the current display code and a trusted environment. Do not expose the portal to the public internet.
 
