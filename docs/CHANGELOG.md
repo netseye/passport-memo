@@ -2,6 +2,10 @@
 
 # Changelog
 
+## Note header spacing — 2026-09-12
+
+- Separate the date/status row from the text field by 12 px, center the items and allow wrapping on narrow screens.
+
 ## Browser audio preview — 2026-09-12
 
 - Preview the latest saved recording in the local portal, with native play/pause, seeking and download controls.

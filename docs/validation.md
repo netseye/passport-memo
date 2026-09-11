@@ -13,7 +13,7 @@ Recorded on **2026-09-11**, updated **2026-09-12**. Build and host tests are rep
 - Actual LVGL UI rendered on the host, including all nine phases with 240-character text. Prior measured peak: 29,336 / 40,960 bytes.
 - EE04 host tests: content/image/refresh behavior, nonce expiry, replay handling, rollover and signing bytes. EE04 firmware compiles separately for XIAO ESP32-S3.
 
-Published-source build: Passport application **2,100,320 bytes / 3,145,728 limit**, merged image **2,165,856 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
+Published-source build: Passport application **2,100,416 bytes / 3,145,728 limit**, merged image **2,165,952 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
 
 ## Real Passport session
 
@@ -74,3 +74,5 @@ Multi-phone compatibility, real-device 120-second transfer, interrupted transfer
 - Both boards together: pairing, persistence receipt, display refresh and retry behavior.
 
 No raw logs, speech, credentials, USB identities or device backups are published with this record.
+
+Header-spacing follow-up: browser previews at 1280 px and 390 px both measured a 12 px gap between the header and text field, with no horizontal overflow. These are host layout checks, not a new physical-phone test.
