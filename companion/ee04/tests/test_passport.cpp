@@ -16,10 +16,12 @@ int main() {
   assert(challenges.match(a, 30000) == -1);
   challenges.reset();
   assert(challenges.match(a, 10) == -1);
-  for (char c = 'a'; c <= 'e'; ++c) challenges.issue(std::string(32,c), 100);
+  for (char c = 'a'; c <= 'e'; ++c)
+    challenges.issue(std::string(32, c), 100);
   assert(challenges.match(a, 100) == -1);
   assert(challenges.match(b, 100) >= 0);
   assert(passportCanonical(a, 42, true, "第一句\n第二句") ==
          "memo-v1\n" + a + "\n42\n1\n第一句\n第二句");
-  puts("PASS Passport nonce expiry, replay rejection, rollover, eviction and signing bytes");
+  puts("PASS Passport nonce expiry, replay rejection, rollover, eviction and signing "
+       "bytes");
 }
