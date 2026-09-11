@@ -2,6 +2,7 @@
 #include "bsp_button.h"
 #include "esp_err.h"
 #include "memo_core.h"
+#include "memo_actions.h"
 #include <stdbool.h>
 typedef struct {
   char ssid[33], password[65], api_key[257], app_id[65], access_key[257];
@@ -12,6 +13,7 @@ typedef struct {
 typedef struct {
   memo_phase_t phase;
   memo_link_state_t link;
+  memo_actions_t actions;
   char text[MEMO_TEXT_BYTES], message[160], ip[48], setup_key[9];
   uint32_t revision, seconds, selected_id;
   unsigned playback_seconds, playback_total, playback_volume;

@@ -76,6 +76,8 @@ static void select_record(void) {
   } else {
     view.text[0] = 0;
     view.selected_id = 0;
+    view.seconds = 0;
+    view.done = view.synced = view.partial = false;
     view.replay_available = false;
     msg("还没有备忘录");
   }
@@ -168,29 +170,40 @@ bool memo_records_get(memo_record_t out[MEMO_HISTORY], size_t *count) {
   give();
   return true;
 }
+/* Caller holds the app lock. Commit before changing history or audio. */
+static bool remove_record(uint32_t id) {
+  int index = -1;
+  for (int i = 0; i < view.count; i++)
+    if (ids[i] == id) { index = i; break; }
+  memo_record_t r;
+  if (index < 0 || !read_record(id, &r)) return false;
+  char key[12];
+  record_key(key, id);
+  if (nvs_erase_key(db, key) != ESP_OK) return false;
+  if (nvs_commit(db) != ESP_OK) {
+    // Best-effort restoration on a storage error. Do not clear audio or history.
+    if (nvs_set_blob(db, key, &r, sizeof(r)) == ESP_OK) nvs_commit(db);
+    return false;
+  }
+  memo_replay_forget(id);
+  memmove(ids + index, ids + index + 1, (view.count - index - 1) * sizeof(*ids));
+  view.count--;
+  if (view.selected > index) view.selected--;
+  if (view.selected >= view.count) view.selected = view.count ? view.count - 1 : 0;
+  return true;
+}
 bool memo_record_edit(uint32_t id, const char *text, bool done, bool remove) {
   if (!text || !text[0] || !memo_text_valid(text, NULL))
     return false;
   take();
   memo_record_t r;
-  if (memo_active(view.phase) || !read_record(id, &r)) {
+  if (memo_active(view.phase) || view.phase == MEMO_RECORD_ACTIONS || !read_record(id, &r)) {
     give();
     return false;
   }
   bool ok;
   if (remove) {
-    char key[12];
-    record_key(key, id);
-    ok = nvs_erase_key(db, key) == ESP_OK && nvs_commit(db) == ESP_OK;
-    if (ok) {
-      memo_replay_forget(id);
-      for (int i = 0; i < view.count; i++)
-        if (ids[i] == id) {
-          memmove(ids + i, ids + i + 1, (view.count - i - 1) * sizeof(*ids));
-          view.count--;
-          break;
-        }
-    }
+    ok = remove_record(id);
   } else {
     snprintf(r.text, sizeof(r.text), "%s", text);
     r.done = done;
@@ -198,7 +211,6 @@ bool memo_record_edit(uint32_t id, const char *text, bool done, bool remove) {
     ok = write_record(&r);
   }
   if (ok) {
-    view.selected = 0;
     if (view.phase == MEMO_HISTORY_PAGE)
       select_record();
     else
@@ -280,7 +292,7 @@ static void save_current(void) {
     return;
   }
   if (view.count >= MEMO_HISTORY) {
-    msg("已存满32条，请在管理页删除旧记录");
+    msg("已存满32条，请返回历史整理旧记录");
     give();
     return;
   }
@@ -329,7 +341,7 @@ static void save_current(void) {
       view.synced = true;
       msg("已保存，并同步到墨水屏");
     } else
-      msg("已保存，墨水屏未连接；长按下键重试");
+      msg("已保存，墨水屏未连接；长按下键打开操作");
     give();
   }
 }
@@ -373,6 +385,7 @@ static void process(int k) {
     return;
   }
   if (k == 12) {
+    view.actions = (memo_actions_t){0};
     view.phase = MEMO_SETTINGS;
     msg("连接屏幕热点，打开 192.168.4.1");
     give();
@@ -473,20 +486,44 @@ static void process(int k) {
         if (write_record(&r))
           select_record();
       }
-    } else if (k == 11 && view.count) {
-      memo_record_t r;
-      memo_config_t c = config;
-      bool ok = read_record(ids[view.selected], &r);
-      give();
-      if (ok && memo_sync_record(&r, &c)) {
-        take();
-        r.synced = 1;
-        write_record(&r);
+    } else if (k == 11 && view.count && view.selected_id) {
+      if (memo_actions_open(&view.actions, view.selected_id))
+        view.phase = MEMO_RECORD_ACTIONS;
+    }
+  } else if (p == MEMO_RECORD_ACTIONS) {
+    memo_action_key_t input;
+    if (k == BSP_BTN_UP) input = MEMO_ACTION_UP;
+    else if (k == BSP_BTN_DOWN) input = MEMO_ACTION_DOWN;
+    else if (k == BSP_BTN_OK) input = MEMO_ACTION_OK;
+    else if (k == 10) input = MEMO_ACTION_BACK;
+    else { give(); return; } // Double/long OK cannot confirm deletion.
+    memo_action_effect_t effect = memo_actions_step(&view.actions, input);
+    if (effect != MEMO_ACTION_NONE) {
+      uint32_t target = view.actions.record_id;
+      view.actions = (memo_actions_t){0};
+      view.phase = MEMO_HISTORY_PAGE;
+      if (effect == MEMO_ACTION_DELETE) {
+        bool ok = remove_record(target);
+        select_record();
+        msg(ok ? (view.count ? "备忘录已删除" : "已删除，暂无备忘录")
+               : "存储异常，请重启检查记录");
+      } else if (effect == MEMO_ACTION_SYNC) {
+        memo_record_t r;
+        memo_config_t c = config;
+        bool ok = read_record(target, &r);
         select_record();
         give();
-      } else
-        memo_message("同步失败，请检查墨水屏地址和配对码");
-      return;
+        ok = ok && memo_sync_record(&r, &c);
+        take();
+        if (ok) {
+          r.synced = 1;
+          ok = write_record(&r);
+        }
+        select_record();
+        if (!ok) msg("同步失败，请检查墨水屏地址和配对码");
+      } else {
+        select_record();
+      }
     }
   } else if (p == MEMO_SETTINGS && (k == BSP_BTN_UP || k == BSP_BTN_OK)) {
     view.phase = MEMO_HOME;

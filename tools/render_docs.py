@@ -5,6 +5,7 @@ Requires Pillow and build/ui-preview/memo_preview. No board is accessed.
 """
 
 from pathlib import Path
+import os
 import subprocess
 
 from PIL import Image, ImageDraw, ImageFont
@@ -35,9 +36,14 @@ def device(canvas, screen, x, y, scale=1):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     screens = {}
-    for name, phase in (("home", 0), ("recording", 2), ("review", 4), ("settings", 6), ("playback", 8)):
+    preview_env = {k: v for k, v in os.environ.items() if not k.startswith("MEMO_PREVIEW_")}
+    for name, phase in (("home", 0), ("recording", 2), ("review", 4), ("history", 5),
+                        ("settings", 6), ("playback", 8), ("actions", 9), ("delete-confirm", 9)):
         ppm = BUILD / f"{name}.ppm"
-        subprocess.run([str(BUILD / "memo_preview"), str(phase), str(ppm)], check=True)
+        env = dict(preview_env)
+        if name == "delete-confirm":
+            env["MEMO_PREVIEW_CONFIRM"] = "1"
+        subprocess.run([str(BUILD / "memo_preview"), str(phase), str(ppm)], env=env, check=True)
         screens[name] = Image.open(ppm).convert("RGB")
         screens[name].save(OUT / f"{name}.png")
 
@@ -67,6 +73,14 @@ def main():
         draw.text((x, 12), label, font=font(17), fill=INK)
         device(replay, screens[name], x, 49)
     replay.save(OUT / "playback-flow.png")
+    deletion = Image.new("RGB", (930, 445), PAPER)
+    draw = ImageDraw.Draw(deletion)
+    for name, label, x in (("history", "HOLD DOWN: ACTIONS", 22),
+                           ("actions", "OK: DELETE MENU", 333),
+                           ("delete-confirm", "DOWN + OK: DELETE", 644)):
+        draw.text((x, 12), label, font=font(17), fill=INK)
+        device(deletion, screens[name], x, 49)
+    deletion.save(OUT / "delete-flow.png")
     print(f"Documentation images: {OUT}")
 
 

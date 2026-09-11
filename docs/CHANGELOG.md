@@ -2,6 +2,12 @@
 
 # Changelog
 
+## Device note actions and clock — 2026-09-12
+
+- Hold DOWN in history for deletion, e-paper sync and return actions. Deletion shows a note excerpt and defaults to Keep; other notes and drafts are retained.
+- Show a Beijing-time (UTC+8) clock on every page, with an unsynchronized placeholder and updates independent of transcript changes.
+- Add host coverage for real application button routing, deletion/storage failures and recovery, clock boundaries, UI bounds and minute rollover; include an illustrated deletion guide.
+
 ## Simpler setup labels — 2026-09-12
 
 - Remove the password-length hint from the device setup screen and portal copy, keeping the password display and login behavior intact.

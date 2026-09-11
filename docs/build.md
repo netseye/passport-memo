@@ -58,6 +58,8 @@ cmake -S tests/ui_preview -B build/ui-preview
 cmake --build build/ui-preview
 build/ui-preview/memo_preview 2 build/recording.ppm
 MEMO_PREVIEW_MAX_TEXT=1 build/ui-preview/memo_preview 4 build/review-max.ppm
+MEMO_PREVIEW_CONFIRM=1 build/ui-preview/memo_preview 9 build/delete-confirm.ppm
+MEMO_PREVIEW_CLOCK_ROLLOVER=1 build/ui-preview/memo_preview 0 build/clock-next.ppm
 ```
 
 [Preview fixtures and image generation](../tests/ui_preview/README.md) use no real device data. Generated firmware, caches and backups are ignored by Git.
@@ -73,3 +75,5 @@ Run `python3 tools/preview_portal.py`, open `http://127.0.0.1:8766`, and enter t
 The web-preview update needs only the application when the replay partition is already installed. Preserve the existing table, identity, memo and replay data.
 
 Host checks also require Node.js 20 or newer for the portal controller tests.
+
+The device action menu and clock update uses the same partition and NVS layouts. On an existing replay-enabled installation only the application needs updating. Host tests exercise actual application button routing with fake NVS, including cancellation, commit failure and simulated reboot; they do not access hardware or user notes.

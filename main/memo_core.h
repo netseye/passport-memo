@@ -16,7 +16,8 @@ typedef enum {
   MEMO_HISTORY_PAGE,
   MEMO_SETTINGS,
   MEMO_ERROR,
-  MEMO_PLAYBACK
+  MEMO_PLAYBACK,
+  MEMO_RECORD_ACTIONS
 } memo_phase_t;
 typedef struct {
   uint32_t version, id, seconds;

@@ -10,10 +10,10 @@ Recorded on **2026-09-11**, updated **2026-09-12**. Build and host tests are rep
 - UTF-8 limits, ASR binary framing, fragmented WebSocket reconstruction, connection/service-error classification and Ogg CRC/page tests.
 - Replay cache: standard CRC32 vector, corrupt/truncated metadata, exact pre-skip/padding removal, 120-second bounds and protected storage partition placement.
 - Host libopus + firmware muxer + FFmpeg: 20 / 100 / 1,000 ms streams, exact decoded duration and EOS.
-- Actual LVGL UI rendered on the host, including all nine phases with 240-character text. Prior measured peak: 29,336 / 40,960 bytes.
+- Actual LVGL UI rendered on the host, including all ten phases with 240-character text, both confirmation selections and the unsynchronized clock. Current measured peak: 31,464 / 40,960 bytes.
 - EE04 host tests: content/image/refresh behavior, nonce expiry, replay handling, rollover and signing bytes. EE04 firmware compiles separately for XIAO ESP32-S3.
 
-Published-source build: Passport application **2,100,368 bytes / 3,145,728 limit**, merged image **2,165,904 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
+Published-source build: Passport application **2,102,992 bytes / 3,145,728 limit**, merged image **2,168,528 bytes**; EE04 application **1,769,744 bytes**, static RAM **63,792 bytes**. Sizes can vary with the Git-derived version string.
 
 ## Real Passport session
 
@@ -64,6 +64,14 @@ The user confirmed that the device portal can play audio and seek. The update pr
 - The in-app browser decoded the synthetic three-second tone, started playback, sought to about 1.5 seconds, and resumed playback after the local HTTP server was stopped. A 390-pixel viewport showed no horizontal overflow. The browser's duration display was approximately 3.0065 seconds; reference decoding yielded exactly 3 seconds.
 
 Multi-phone compatibility, real-device 120-second transfer, interrupted transfers and simultaneous setup exit remain unverified. The illustrated portal and committed tone contain synthetic data only.
+
+## Device actions and clock verification — 2026-09-12
+
+- **Build:** fresh ESP-IDF 5.5.3 build and the complete validation gate pass. The application is 2,102,992 bytes; persisted configuration/record layouts and partition table are unchanged.
+- **Host tests:** actual app button routing covers the default Keep choice, explicit deletion, cancellation, ignored double presses, settings exit, pinned/stale IDs, adjacent selection, last-note deletion, unrelated note/audio/draft retention, NVS erase/commit failures, shared web deletion, sync and simulated reboot recovery. Clock tests cover all 1,440 minutes, UTC+8 day rollover and invalid time.
+- **UI preview:** ten phases with 240-character text, both confirmation selections and unsynchronized time pass. LVGL peaks at 31,464 / 40,960 bytes; label bounds and a minute update without a view revision change are asserted. Illustrations use synthetic notes and a fixed 09:41 clock.
+- **Device tests:** application flash/readback passes. Fresh before/after snapshots of the replay cache, identity and entire memo store match byte-for-byte. The device rebooted and obtained a router IP without an observed crash.
+- **Unverified:** user confirmation of the new clock and physical delete/cancel flow is pending. No user note was deleted for automated validation; power interruption during deletion and both-board sync remain untested.
 
 ## Still to verify on hardware
 

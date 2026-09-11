@@ -58,6 +58,8 @@ cmake -S tests/ui_preview -B build/ui-preview
 cmake --build build/ui-preview
 build/ui-preview/memo_preview 2 build/recording.ppm
 MEMO_PREVIEW_MAX_TEXT=1 build/ui-preview/memo_preview 4 build/review-max.ppm
+MEMO_PREVIEW_CONFIRM=1 build/ui-preview/memo_preview 9 build/delete-confirm.ppm
+MEMO_PREVIEW_CLOCK_ROLLOVER=1 build/ui-preview/memo_preview 0 build/clock-next.ppm
 ```
 
 [预览数据与图片生成](../tests/ui_preview/README.zh_CN.md)不使用真实设备数据。固件、缓存和备份均被 Git 忽略。
@@ -73,3 +75,5 @@ CI 在推送及 Pull Request 上运行相同检查，上传合并开发镜像，
 若已安装 replay 分区，网页预览更新只需升级应用；保留既有分区表、身份、备忘录及原声缓存。
 
 主机检查还需 Node.js 20 或更新版本，用于运行网页控制器测试。
+
+设备操作菜单与时钟更新沿用原有分区和 NVS 布局，已安装原声回放的设备只需更新应用。主机测试通过模拟 NVS 执行真实应用的按键逻辑，覆盖取消、提交失败及模拟重启；不接触硬件或用户记录。

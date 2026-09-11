@@ -8,6 +8,7 @@
 | --- | --- |
 | `main/main.c` | Initialize I2C, display, audio and battery; start the app |
 | `main/memo_app.c` | Worker events, application state, configuration, NVS notes and drafts |
+| `main/memo_actions.c`, `main/memo_clock.c` | Host-testable action/confirmation state and UTC+8 clock formatting |
 | `main/memo_ui.c` | LVGL pages, text wrapping, scroll, status and microphone animation |
 | `main/ui_pixel*` | Shared upstream pixel theme and layout helpers |
 | `main/memo_asr.c` | Capture task, Opus encoding, TLS/WebSocket session and provider results |
@@ -20,6 +21,12 @@
 | `companion/ee04/` | Independently built GPL receiver, using only text over LAN |
 
 Button callbacks enqueue events. The application worker serializes slow operations; application snapshots are protected by a mutex. Audio/network callbacks publish state rather than touching LVGL. Only the UI timer renders the view; non-LVGL callers use the BSP LVGL lock.
+
+## Note actions and clock
+
+Holding DOWN in history opens `MEMO_RECORD_ACTIONS` with a pinned note ID. `memo_actions.c` handles navigation and defaults the deletion confirmation to Keep. Only an explicit Confirm delete selection erases the note. The application worker shares the web deletion helper: validate ID and stored record, erase and commit NVS, then remove the history entry and forget matching cached audio. A failed commit attempts to restore the original record and reports a storage error without clearing audio or in-memory history. Hardware power-loss behavior remains to be tested.
+
+The menu blocks web note edits, and leaving setup stops the HTTP server before device actions can run. Menu rows reuse three LVGL objects, and no new task is created. A separate one-second LVGL timer formats `time(NULL)` as UTC+8 and updates its label only when the string changes; it runs even when the view revision is unchanged. System timezone, UTC storage and existing SNTP requests are unchanged.
 
 ## Audio and ASR
 
@@ -70,6 +77,6 @@ The synchronous setup HTTP task serves `GET /api/audio?id=<saved-note-id>` behin
 
 `memo_replay_export.c` verifies the entire raw payload CRC before emitting Ogg headers, then remuxes unmodified Opus packets in chunks of at most 1,360 bytes. It uses about 1.4 KB of local buffers on the existing 8 KB HTTP stack; no decoder, new task, full-clip allocation or permanent RAM buffer is added. Granules remove pre-skip and trailing padding, including interrupted captures. A 120-second clip is at most 408,167 Ogg bytes.
 
-Cache ownership depends on setup lifecycle: HTTP handlers run serially, exports require the settings phase, and leaving settings calls `httpd_stop()` before the application worker can record, bind or play another clip. Note deletion is serialized on that same HTTP task. Do not make this handler asynchronous without adding explicit cache ownership. The callback bounds transfer time to 15 seconds plus at most the 5-second socket send timeout. Midstream failures close the chunked response without a success terminator.
+Cache ownership depends on setup lifecycle: HTTP handlers run serially, exports require the settings phase, and leaving settings calls `httpd_stop()` before the application worker can record, bind or play another clip. Web note deletion is serialized on that same HTTP task; device deletion runs in the application worker after setup has closed. Do not make this handler asynchronous without adding explicit cache ownership. The callback bounds transfer time to 15 seconds plus at most the 5-second socket send timeout. Midstream failures close the chunked response without a success terminator.
 
 The browser fetches with the management code in a header, then gives a Blob URL to native audio controls. CSP allows `media-src blob:`; no credential is placed in a media URL. Requests use `no-store`, and status polling pauses during audio loading. Loaded clips survive a connection loss in the current page; rerender/unload aborts pending transfers and revokes Blob URLs. No automatic audio fetch or playback happens on page load.

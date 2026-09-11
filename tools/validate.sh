@@ -45,6 +45,14 @@ run_static_checks() {
         main/memo_replay_format.c main/memo_ogg.c \
         -o "${test_dir}/test_memo_replay_export"
     "${test_dir}/test_memo_replay_export"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
+        tests/test_memo_actions_clock.c main/memo_actions.c main/memo_clock.c \
+        -o "${test_dir}/test_memo_actions_clock"
+    "${test_dir}/test_memo_actions_clock"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Itests/app_host -Imain \
+        tests/test_memo_app.c main/memo_actions.c main/memo_core.c \
+        -o "${test_dir}/test_memo_app"
+    "${test_dir}/test_memo_app"
     node tests/test_portal_audio.cjs
     python3 tests/test_verify_firmware.py
     rm -rf "${test_dir}"

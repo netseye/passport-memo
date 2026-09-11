@@ -1,12 +1,14 @@
 #include "bsp_display.h"
 #include "lvgl.h"
 #include "memo_app.h"
+#include "memo_clock.h"
 #include "ui_pixel.h"
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 LV_FONT_DECLARE(memo_font_16);
 static lv_obj_t *screen, *status, *battery, *paper, *content, *caption, *hint, *mascot,
-    *bars[18];
+    *bars[18], *clock_label, *action_rows[3], *action_labels[3];
 static uint32_t revision;
 static memo_phase_t shown_phase = 99;
 static uint32_t shown_id;
@@ -20,8 +22,39 @@ static void set_text(lv_obj_t *label, const char *text) {
 static const char *phase_name(memo_phase_t p) {
   static const char *names[] = {"灵感收件箱", "正在连接",     "正在聆听",
                                 "正在整理",   "确认这条备忘", "我的备忘录",
-                                "设备设置",   "暂时遇到问题", "原声回放"};
-  return p <= MEMO_PLAYBACK ? names[p] : "";
+                                "设备设置",   "暂时遇到问题", "原声回放", "记录操作"};
+  return p <= MEMO_RECORD_ACTIONS ? names[p] : "";
+}
+static void clock_update(lv_timer_t *timer) {
+  (void)timer;
+  char text[6];
+  memo_clock_format(text, time(NULL));
+  set_text(clock_label, text);
+}
+static void show_actions(const memo_view_t *v) {
+  char excerpt[40], text[128];
+  size_t n = memo_text_prefix(v->text, 8, sizeof(excerpt) - 1);
+  memcpy(excerpt, v->text, n);
+  excerpt[n] = 0;
+  bool confirm = v->actions.confirm_delete;
+  snprintf(text, sizeof(text), "%s“%s%s”", confirm ? "删除文字和原声？\n" : "",
+           excerpt, v->text[n] ? "…" : "");
+  set_text(content, text);
+  const char *labels[] = {confirm ? "保留备忘" : "删除备忘录",
+                           confirm ? "确认删除" : "同步墨水屏", "返回历史"};
+  for (unsigned i = 0; i < (confirm ? 2u : 3u); i++) {
+    lv_obj_remove_flag(action_rows[i], LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_pos(action_rows[i], 0, confirm ? 60 + i * 30 : 22 + i * 32);
+    lv_obj_set_height(action_rows[i], confirm ? 26 : 28);
+    lv_obj_set_style_bg_color(action_rows[i],
+        lv_color_hex(v->actions.selected == i ? UI_YELLOW : 0xffffff), 0);
+    lv_obj_set_style_border_width(action_rows[i], v->actions.selected == i ? 2 : 1, 0);
+    lv_obj_set_style_text_color(action_labels[i],
+        lv_color_hex(i == (confirm ? 1u : 0u) ? 0xA53225 : UI_INK), 0);
+    set_text(action_labels[i], labels[i]);
+    lv_obj_center(action_labels[i]);
+  }
+  set_text(hint, "上下选择 确定执行");
 }
 static void update(lv_timer_t *timer) {
   (void)timer;
@@ -41,11 +74,17 @@ static void update(lv_timer_t *timer) {
   else
     snprintf(b, sizeof(b), "--%%");
   set_text(battery, b);
-  snprintf(b, sizeof(b), "%s  %s", v.online ? "●" : "○", phase_name(v.phase));
+  snprintf(b, sizeof(b), "%s  %s", v.online ? "●" : "○",
+           v.phase == MEMO_RECORD_ACTIONS && v.actions.confirm_delete ? "删除确认" : phase_name(v.phase));
   set_text(status, b);
   lv_obj_set_style_bg_color(
-      paper, lv_color_hex(v.phase == MEMO_ERROR ? 0xFFE4D4 : UI_PAPER), 0);
-  if (v.phase == MEMO_HOME) {
+      paper, lv_color_hex(v.phase == MEMO_ERROR ||
+                           (v.phase == MEMO_RECORD_ACTIONS && v.actions.confirm_delete)
+                           ? 0xFFE4D4 : UI_PAPER), 0);
+  for (unsigned i = 0; i < 3; i++) lv_obj_add_flag(action_rows[i], LV_OBJ_FLAG_HIDDEN);
+  if (v.phase == MEMO_RECORD_ACTIONS) {
+    show_actions(&v);
+  } else if (v.phase == MEMO_HOME) {
     snprintf(b, sizeof(b),
              "记录一句，留住灵感。\n\n确定键开始录音\n上下键查看历史\n\n已收藏 "
              "%d / 32 条",
@@ -84,7 +123,11 @@ static void update(lv_timer_t *timer) {
                             : v.replay_available ? "双击确定 回放原声"
                             : v.text[0] ? "确定  保存备忘" : "长按上键 返回");
   }
-  if (v.phase == MEMO_PLAYBACK)
+  if (v.phase == MEMO_RECORD_ACTIONS)
+    snprintf(b, sizeof(b), "%s", v.actions.confirm_delete
+                                 ? "删除后无法撤销 · 长按上键取消"
+                                 : "长按上键返回历史");
+  else if (v.phase == MEMO_PLAYBACK)
     snprintf(b, sizeof(b), "%02u:%02u / %02u:%02u  音量 %u%%",
              v.playback_seconds / 60, v.playback_seconds % 60,
              v.playback_total / 60, v.playback_total % 60, v.playback_volume);
@@ -99,8 +142,9 @@ static void update(lv_timer_t *timer) {
     snprintf(b, sizeof(b), "%s", memo_link_message(v.link));
   else if (v.phase == MEMO_SETTINGS && v.configured)
     snprintf(b, sizeof(b), "保存后按上键返回并联网");
-  else if (v.phase == MEMO_HISTORY_PAGE && v.replay_available)
-    snprintf(b, sizeof(b), "双击确定回放 · %.120s", v.message);
+  else if (v.phase == MEMO_HISTORY_PAGE)
+    snprintf(b, sizeof(b), "%s长按下键操作 · %.100s",
+             v.replay_available ? "双击确定回放 · " : "", v.message);
   else
     snprintf(b, sizeof(b), "%s", v.message);
   set_text(caption, b);
@@ -160,6 +204,12 @@ void memo_ui_start(void) {
   lv_obj_set_pos(battery, 175, 30);
   status = ui_pixel_label(screen, "", &memo_font_16, 0xffffff);
   lv_obj_set_pos(status, 14, 54);
+  lv_obj_set_width(status, 154);
+  lv_label_set_long_mode(status, LV_LABEL_LONG_CLIP);
+  clock_label = ui_pixel_label(screen, "--:--", &lv_font_montserrat_14, 0xffffff);
+  lv_obj_set_pos(clock_label, 174, 55);
+  lv_obj_set_width(clock_label, 52);
+  lv_obj_set_style_text_align(clock_label, LV_TEXT_ALIGN_RIGHT, 0);
   paper = ui_pixel_panel_create(screen, 11, 78, 212, 140, UI_PAPER);
   lv_obj_set_style_clip_corner(paper, true, 0);
   content = ui_pixel_label(paper, "", &memo_font_16, UI_INK);
@@ -167,6 +217,16 @@ void memo_ui_start(void) {
   lv_label_set_long_mode(content, LV_LABEL_LONG_WRAP);
   lv_obj_set_style_text_line_space(content, 3, 0);
   lv_obj_set_pos(content, 0, 0);
+  for (unsigned i = 0; i < 3; i++) {
+    action_rows[i] = lv_obj_create(paper);
+    lv_obj_remove_style_all(action_rows[i]);
+    lv_obj_remove_flag(action_rows[i], LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(action_rows[i], 190);
+    lv_obj_set_style_bg_opa(action_rows[i], LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(action_rows[i], lv_color_hex(UI_INK), 0);
+    action_labels[i] = ui_pixel_label(action_rows[i], "", &memo_font_16, UI_INK);
+    lv_obj_add_flag(action_rows[i], LV_OBJ_FLAG_HIDDEN);
+  }
   for (int i = 0; i < 18; i++) {
     bars[i] = lv_obj_create(screen);
     lv_obj_remove_style_all(bars[i]);
@@ -184,6 +244,8 @@ void memo_ui_start(void) {
   lv_label_set_long_mode(caption, LV_LABEL_LONG_SCROLL_CIRCULAR);
   lv_screen_load(screen);
   lv_timer_create(update, 50, NULL);
+  clock_update(NULL);
+  lv_timer_create(clock_update, 1000, NULL);
   lv_timer_create(auto_read, 4500, NULL);
   bsp_lvgl_unlock();
 }

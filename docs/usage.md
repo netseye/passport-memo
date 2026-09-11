@@ -75,6 +75,22 @@ Home UP/DOWN opens history. In history, UP/DOWN selects another note; long text 
 
 The web portal edits, deletes and exports notes as JSON. JSON import is not implemented. A full 32-note history requires deleting an old note; it never silently evicts one.
 
+![Delete a note from the device](images/delete-flow.png)
+
+*Host-rendered screens using a synthetic note. The confirmation initially selects Keep.*
+
+To delete on the device:
+
+1. Select the note in history and **hold DOWN** to open its actions.
+2. Choose **Delete note** (first menu option) with OK. Check the note excerpt in the confirmation.
+3. The default is **Keep** (first confirmation option). Press DOWN to choose **Confirm delete** (second confirmation option), then OK to erase it. Hold UP to cancel at either step.
+
+Deletion removes the selected text and its cached original audio, if present. Other notes and the unsaved draft remain. The adjacent note is selected afterward; deleting the last note shows an empty history. Deletion does not clear the EE04 display or previously downloaded files. In the same menu, **Sync e-paper** retries synchronization and **Return to history** returns to history.
+
+## Device clock
+
+The status row at the top right shows **HH:mm in Beijing time (UTC+8)** on every page, including recording and playback. It uses the existing network time synchronization; before that finishes it shows `--:--`. Once synchronized, it keeps ticking when Wi-Fi disconnects. After reboot or power-off it needs network time again. Saved timestamps remain UTC; the portal formats them in the browser's local timezone.
+
 ## Button reference
 
 | Page | UP / DOWN | OK | Hold UP | Hold DOWN | Hold OK |
@@ -82,7 +98,8 @@ The web portal edits, deletes and exports notes as JSON. JSON import is not impl
 | Home | Open history | Start | Restore draft | — | Settings |
 | Connecting / recording / finishing | — | Stop | — | — | Cancel, retaining recognized text |
 | Review / error | Scroll text | Save nonempty text | Home; retain draft | — | Settings |
-| History | Previous / next | Toggle completed | Home | Retry EE04 sync | Settings |
+| History | Previous / next | Toggle completed | Home | Note actions | Settings |
+| Note actions / delete confirmation | Select option | Activate selection | Cancel to history | — | Cancel and open settings |
 | Playback | Volume ±5% | Stop playback | — | — | Stop playback |
 | Settings | UP exits | Exit | — | — | Extend setup window |
 

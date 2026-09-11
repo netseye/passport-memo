@@ -18,6 +18,6 @@
 | Text changed or stops at 240 characters | Interim hypotheses can revise words; 240 Unicode characters is the current per-note limit. |
 | No replay on double press | Only the latest recording has audio. Starting another recording replaces it. Upgrade the partition table with the app; old notes cannot gain missing audio. |
 | Playback too quiet / loud | Press UP/DOWN during playback; default 85%, steps of 5%. The feedback-sounds toggle does not disable replay. |
-| EE04 sync failed | Check same LAN, enabled receiver, IP and pairing code. Hold DOWN in history to retry. Passport retains its local copy. |
+| EE04 sync failed | Check same LAN, enabled receiver, IP and pairing code. Hold DOWN in history and choose the e-paper sync action to retry. Passport retains its local copy. |
 
 For a report, include the commit, board, recording duration, displayed error and sanitized application log. Never attach tokens, SSIDs/passwords, transcripts, NVS/Flash dumps or a screen containing your setup code. [Open an issue](https://github.com/netseye/passport-memo/issues/new/choose).
