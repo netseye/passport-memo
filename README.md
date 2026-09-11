@@ -18,7 +18,7 @@ Turn the FoloToy AI Passport into a pocket voice notebook. Its ESP32-C3 records 
 - Live Chinese transcription with a pixel UI, microphone levels, battery status and automatic text wrapping.
 - Review before saving, retain an unsaved draft, browse up to **32 notes**, and mark notes complete.
 - Double-press OK to replay the latest recording; UP/DOWN changes volume and OK stops. Replay remains available on its saved history note.
-- A local web portal for Wi-Fi / ASR setup, note editing, deletion and JSON export.
+- A local web portal for Wi-Fi / ASR setup, note editing, deletion, JSON export and preview/download of the latest saved recording.
 - **16 kbps Opus** on the device: roughly **3.4 KB/s Ogg payload**, excluding WebSocket/TLS overhead.
 - Optional signed text synchronization to an **EE04 e-paper display** on the same LAN.
 

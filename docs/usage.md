@@ -55,7 +55,21 @@ After recording, **double-press OK quickly** on the review page to replay. Durin
 
 Only the **latest recording**, up to 120 seconds, is retained. Its saved history note displays a double-press replay hint. Text edits leave the original audio intact. Playback works offline and a completed cache survives reboot. Starting the next recording clears the previous audio, even if connecting subsequently fails. Deleting its note also clears the cache. Older notes retain text only, and JSON export excludes audio. If audio was captured without recognized text, double-press OK on the error page to listen.
 
-## 5. Read and organize notes
+## 5. Preview audio in the browser
+
+![Browser audio preview with sample notes](images/portal-audio.png)
+
+*Actual portal with fictional notes and a synthetic three-second tone, not a person's recording.*
+
+1. Save the latest recording's text on Passport. Hold OK to open setup, join its hotspot and log in to **http://192.168.4.1**.
+2. Keep the device on its setup page. The matching note shows **Preview original audio**; tap it to load and play. The controls support pause, seeking and browser volume.
+3. Once loaded, audio remains playable in this tab after the hotspot disconnects. **Download original audio** saves an `.ogg` file before the next recording replaces the device cache. Refreshing or rerendering the note list releases the in-page copy.
+
+Older notes show that no audio is retained. Unsaved drafts must first be saved on the device to appear here. A disconnected page cannot load a clip that has not already been fetched. JSON export still contains text and metadata only.
+
+The page checks native Ogg/Opus playback support and provides a download fallback when unavailable. [WebKit documents Ogg/Opus support](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/) starting with Safari 18.4 on iOS/iPadOS 18.4 and macOS Sequoia 15.4. Older systems may require a compatible player or an update. Browser playback uses the unchanged original audio; the device speaker's gain and volume controls do not apply.
+
+## 6. Read and organize notes
 
 Home UP/DOWN opens history. In history, UP/DOWN selects another note; long text scrolls by 72 pixels every 4.5 seconds. OK toggles completion. Hold UP to return Home.
 

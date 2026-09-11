@@ -28,7 +28,18 @@ NOTES = [
         "created": 1789088400,
         "done": False,
         "partial": False,
-    }
+        "audio_available": True,
+        "audio_duration_ms": 3000,
+    },
+    {
+        "id": 2,
+        "text": "周末整理书桌，给新想法腾出一点空间。",
+        "created": 1789084800,
+        "done": True,
+        "partial": False,
+        "audio_available": False,
+        "audio_duration_ms": 0,
+    },
 ]
 
 
@@ -37,19 +48,28 @@ class Preview(BaseHTTPRequestHandler):
         if self.path == "/":
             data = (ROOT / "main/memo_portal.html").read_bytes()
             kind = "text/html; charset=utf-8"
-        elif self.path in ("/api/state", "/api/notes"):
+        elif self.path.startswith("/api/"):
             if self.headers.get("X-Memo-Key") != "12345678":
                 self.send_error(401, "Use the demonstration code 12345678")
                 return
-            value = STATE if self.path == "/api/state" else NOTES
-            data = json.dumps(value, ensure_ascii=False).encode("utf-8")
-            kind = "application/json; charset=utf-8"
+            if self.path in ("/api/state", "/api/notes"):
+                value = STATE if self.path == "/api/state" else NOTES
+                data = json.dumps(value, ensure_ascii=False).encode("utf-8")
+                kind = "application/json; charset=utf-8"
+            elif self.path == "/api/audio?id=1":
+                data = (ROOT / "tests/fixtures/demo-tone.ogg").read_bytes()
+                kind = "audio/ogg"
+            else:
+                self.send_error(404)
+                return
         else:
             self.send_error(404)
             return
         self.send_response(200)
         self.send_header("Content-Type", kind)
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; media-src blob:; frame-ancestors 'none'")
         self.end_headers()
         self.wfile.write(data)
 

@@ -65,3 +65,11 @@ MEMO_PREVIEW_MAX_TEXT=1 build/ui-preview/memo_preview 4 build/review-max.ppm
 CI 在推送及 Pull Request 上运行相同检查，上传合并开发镜像，不会刷机、打标签或自动发布 Release。[EE04 使用独立 Arduino 构建](../companion/ee04/README.zh_CN.md)，不能混刷两块板的固件。
 
 升级原声回放版本时需同时更新分区表和应用；只刷应用会继续识别，但无法缓存或回放。不要擦除 `memo` 或 `cardid`。
+
+## 本地网页预览
+
+执行 `python3 tools/preview_portal.py`，打开 `http://127.0.0.1:8766`，输入公开演示码 `12345678`。只读预览提供虚构备忘录与 `tests/fixtures/demo-tone.ogg` 中的 440 Hz 合成音。可用 `python3 tests/test_memo_ogg_decode.py tests/fixtures/demo-tone.ogg` 重新生成（需要 libopus 与 FFmpeg）。
+
+若已安装 replay 分区，网页预览更新只需升级应用；保留既有分区表、身份、备忘录及原声缓存。
+
+主机检查还需 Node.js 20 或更新版本，用于运行网页控制器测试。

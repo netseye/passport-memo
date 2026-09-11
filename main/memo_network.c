@@ -13,6 +13,7 @@
 #include "freertos/task.h"
 #include "mbedtls/md.h"
 #include "memo_app.h"
+#include "memo_replay.h"
 #include <ctype.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -90,7 +91,7 @@ static esp_err_t index_page(httpd_req_t *r) {
   httpd_resp_set_hdr(r, "Cache-Control", "no-store");
   httpd_resp_set_hdr(r, "Content-Security-Policy",
                      "default-src 'self'; script-src 'unsafe-inline'; style-src "
-                     "'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'");
+                     "'unsafe-inline'; connect-src 'self'; media-src blob:; frame-ancestors 'none'");
   return httpd_resp_send(r, html_start, html_end - html_start - 1);
 }
 static esp_err_t state_page(httpd_req_t *r) {
@@ -207,10 +208,63 @@ static esp_err_t notes_page(httpd_req_t *r) {
     cJSON_AddBoolToObject(n, "done", records[i].done);
     cJSON_AddBoolToObject(n, "synced", records[i].synced);
     cJSON_AddBoolToObject(n, "partial", records[i].partial);
+    unsigned duration_ms = 0;
+    cJSON_AddBoolToObject(n, "audio_available",
+                          memo_replay_saved_info(records[i].id, &duration_ms));
+    cJSON_AddNumberToObject(n, "audio_duration_ms", duration_ms);
     cJSON_AddItemToArray(j, n);
   }
   free(records);
   return json_response(r, j);
+}
+typedef struct {
+  httpd_req_t *request;
+  int64_t started;
+  bool sent;
+  size_t bytes;
+} audio_response_t;
+static bool audio_chunk(void *ctx, const void *data, size_t bytes) {
+  audio_response_t *response = ctx;
+  /* Bound setup exit latency even for a client reading very slowly. */
+  if (esp_timer_get_time() - response->started > 15000000) return false;
+  response->sent = true;
+  if (httpd_resp_send_chunk(response->request, data, bytes) != ESP_OK) return false;
+  response->bytes += bytes;
+  return true;
+}
+static esp_err_t audio_page(httpd_req_t *r) {
+  if (!authorized(r)) return ESP_OK;
+  char query[32], value[11];
+  uint64_t id = 0;
+  if (httpd_req_get_url_query_str(r, query, sizeof(query)) != ESP_OK ||
+      httpd_query_key_value(query, "id", value, sizeof(value)) != ESP_OK || !value[0])
+    return httpd_resp_send_err(r, HTTPD_400_BAD_REQUEST, "无效记录编号");
+  for (const char *p = value; *p; p++) {
+    if (*p < '0' || *p > '9')
+      return httpd_resp_send_err(r, HTTPD_400_BAD_REQUEST, "无效记录编号");
+    id = id * 10 + (*p - '0');
+  }
+  if (!id || id > UINT32_MAX)
+    return httpd_resp_send_err(r, HTTPD_400_BAD_REQUEST, "无效记录编号");
+  memo_view_t view;
+  memo_snapshot(&view);
+  if (view.phase != MEMO_SETTINGS) {
+    httpd_resp_set_status(r, "503 Service Unavailable");
+    return httpd_resp_sendstr(r, "请保持设备在设置页");
+  }
+  if (!memo_replay_saved_info((uint32_t)id, NULL))
+    return httpd_resp_send_err(r, HTTPD_404_NOT_FOUND, "原声已被替换或未保存");
+  httpd_resp_set_type(r, "audio/ogg");
+  httpd_resp_set_hdr(r, "X-Content-Type-Options", "nosniff");
+  audio_response_t response = {.request = r, .started = esp_timer_get_time()};
+  memo_export_result_t result = memo_replay_stream((uint32_t)id, audio_chunk, &response);
+  ESP_LOGI("memo_network", "Audio preview result=%d bytes=%u elapsed_ms=%lld stack_free=%u",
+           result, (unsigned)response.bytes, (esp_timer_get_time() - response.started) / 1000,
+           (unsigned)uxTaskGetStackHighWaterMark(NULL));
+  if (result == MEMO_EXPORT_OK) return httpd_resp_send_chunk(r, NULL, 0);
+  /* An incomplete chunked response must close, never look like a valid clip. */
+  if (response.sent) return ESP_FAIL;
+  return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "原声读取失败，文字仍保留");
 }
 static esp_err_t edit_page(httpd_req_t *r) {
   if (!authorized(r))
@@ -322,6 +376,7 @@ void memo_portal_start(void) {
       {.uri = "/api/state", .method = HTTP_GET, .handler = state_page},
       {.uri = "/api/config", .method = HTTP_POST, .handler = configure_page},
       {.uri = "/api/notes", .method = HTTP_GET, .handler = notes_page},
+      {.uri = "/api/audio", .method = HTTP_GET, .handler = audio_page},
       {.uri = "/api/note", .method = HTTP_POST, .handler = edit_page},
   };
   for (unsigned i = 0; i < sizeof(routes) / sizeof(*routes); i++)

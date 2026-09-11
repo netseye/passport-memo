@@ -40,6 +40,12 @@ run_static_checks() {
         tests/test_memo_playback_pcm.c main/memo_playback_pcm.c \
         -o "${test_dir}/test_memo_playback_pcm"
     "${test_dir}/test_memo_playback_pcm"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
+        tests/test_memo_replay_export.c main/memo_replay_export.c \
+        main/memo_replay_format.c main/memo_ogg.c \
+        -o "${test_dir}/test_memo_replay_export"
+    "${test_dir}/test_memo_replay_export"
+    node tests/test_portal_audio.cjs
     python3 tests/test_verify_firmware.py
     rm -rf "${test_dir}"
     ./companion/ee04/tests/run.sh

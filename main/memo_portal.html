@@ -193,6 +193,31 @@
       font: 13px monospace;
       text-align: right;
     }
+    .audio-preview {
+      margin: 16px 0 20px;
+      padding: 16px;
+      background: #e8f4fc;
+      border: 2px solid var(--ink);
+      border-radius: 3px;
+    }
+    .audio-preview .row {
+      margin: 0 0 12px;
+      justify-content: space-between;
+    }
+    .audio-preview audio {
+      display: block;
+      width: 100%;
+      margin: 12px 0;
+    }
+    .audio-preview a {
+      display: inline-block;
+      color: var(--ink);
+      font-weight: 600;
+      padding: 10px 0;
+    }
+    .audio-preview p {
+      margin: 8px 0 0;
+    }
     .check {
       display: flex;
       align-items: center;
@@ -289,6 +314,9 @@
           <h2>灵感收件箱 <small id="count"></small></h2>
           <button id="export" class="secondary">导出 JSON</button>
         </div>
+        <p class="muted">
+          原声试听：先在设备上保存这条备忘录，再进入设置并保持热点连接。设备仅保留最近一段原声，JSON 导出只包含文字。
+        </p>
         <div id="notes"></div>
       </div>
       <form id="settings" class="hidden">
@@ -423,24 +451,40 @@
   </main>
   <script>
     let key = "",
-      records = [];
+      records = [],
+      connected = false,
+      statusBusy = false,
+      previews = [];
     const $ = (s) => document.querySelector(s);
     function say(t) {
       $("#status").textContent = t;
     }
     async function api(path, data) {
-      let r = await fetch(path, {
-        method: data ? "POST" : "GET",
-        headers: {
-          "X-Memo-Key": key,
-          ...(data ? { "Content-Type": "application/json" } : {}),
-        },
-        body: data ? JSON.stringify(data) : undefined,
-      });
-      if (!r.ok) throw Error(await r.text());
-      return r.json();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      try {
+        let r = await fetch(path, {
+          method: data ? "POST" : "GET",
+          signal: controller.signal,
+          cache: "no-store",
+          headers: {
+            "X-Memo-Key": key,
+            ...(data ? { "Content-Type": "application/json" } : {}),
+          },
+          body: data ? JSON.stringify(data) : undefined,
+        });
+        if (!r.ok) throw Error(await r.text());
+        return await r.json();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    function setConnected(value) {
+      connected = value;
+      for (const preview of previews) preview.update();
     }
     function updateStatus(s) {
+      setConnected(true);
       $("#connection").textContent = s.portal
         ? "配置热点已连接"
         : s.online
@@ -465,13 +509,23 @@
           : "尚未配置识别凭据";
     }
     async function refreshStatus() {
-      if (!key || $("#app").classList.contains("hidden")) return;
+      if (
+        !key ||
+        $("#app").classList.contains("hidden") ||
+        statusBusy ||
+        previews.some((p) => p.loading)
+      )
+        return;
+      statusBusy = true;
       try {
         updateStatus(await api("/api/state"));
       } catch (e) {
+        setConnected(false);
         $("#connection").textContent = "管理连接已断开";
         $("#live-status").textContent =
-          "管理窗口可能已关闭，或 Wi-Fi 正在切换。需要继续设置时，长按设备确定键并重新连接热点。";
+          "管理窗口可能已关闭，或 Wi-Fi 正在切换。载入原声或继续设置，请长按设备确定键并重新连接热点；已载入的音频仍可在本页播放。";
+      } finally {
+        statusBusy = false;
       }
     }
     async function load() {
@@ -504,7 +558,144 @@
       if (cls) n.className = cls;
       return n;
     }
+    function disposePreviews() {
+      for (const preview of previews) preview.dispose();
+      previews = [];
+    }
+    window.addEventListener("pagehide", (event) => {
+      // A back/forward-cache entry still owns this document and its Blob URLs.
+      if (!event.persisted) disposePreviews();
+      else document.querySelectorAll("audio").forEach((audio) => audio.pause());
+    });
+    function audioPreview(record, date) {
+      const box = node("div", undefined, "audio-preview");
+      const heading = node("div", undefined, "row");
+      const seconds = Math.ceil(record.audio_duration_ms / 1000);
+      heading.append(
+        node("strong", "原声回放"),
+        node(
+          "span",
+          `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`,
+          "pill",
+        ),
+      );
+      const button = node("button", "▶ 试听原声");
+      button.type = "button";
+      const audio = node("audio", undefined, "hidden");
+      audio.controls = true;
+      audio.preload = "none";
+      audio.setAttribute("aria-label", `${date} 的录音`);
+      const hint = node("p", undefined, "muted");
+      hint.setAttribute("role", "status");
+      const download = node("a", "下载原声", "hidden");
+      download.download = `passport-memo-${record.id}.ogg`;
+      let url = "",
+        disposed = false,
+        failure = "",
+        controller;
+      const supported = !!audio.canPlayType('audio/ogg; codecs="opus"');
+      const preview = {
+        loading: false,
+        update() {
+          button.disabled = preview.loading || !connected;
+          button.textContent = preview.loading
+            ? "正在载入…"
+            : supported
+              ? "▶ 试听原声"
+              : "载入并下载原声";
+          hint.textContent =
+            failure ||
+            (url
+              ? supported
+                ? "已载入，可拖动进度；热点断开后仍可在本页试听。"
+                : "当前浏览器不支持此音频格式，请下载播放，或更新系统和浏览器。"
+              : preview.loading
+                ? "正在从 Passport 载入，请保持设备在设置页。"
+                : connected
+                  ? "点击后载入原声。下一次录音会替换设备上的这段音频。"
+                  : "请重新连接 Passport-Memo 热点，并保持设备在设置页以载入原声。");
+        },
+        dispose() {
+          disposed = true;
+          controller?.abort();
+          audio.pause();
+          audio.removeAttribute("src");
+          audio.load();
+          if (url) URL.revokeObjectURL(url);
+        },
+      };
+      audio.onplay = () => {
+        document.querySelectorAll("audio").forEach((other) => {
+          if (other !== audio) other.pause();
+        });
+      };
+      audio.onerror = () => {
+        if (!url || disposed) return;
+        failure = "浏览器无法播放这段音频，请下载播放，或更新系统和浏览器。";
+        preview.update();
+      };
+      button.onclick = async () => {
+        if (preview.loading || !connected) return;
+        preview.loading = true;
+        failure = "";
+        controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 25000);
+        preview.update();
+        try {
+          const response = await fetch(`/api/audio?id=${record.id}`, {
+            headers: { "X-Memo-Key": key },
+            cache: "no-store",
+            signal: controller.signal,
+          });
+          if (!response.ok) {
+            throw Error(
+              response.status === 401
+                ? "管理密码已失效，请刷新页面并用屏幕上的密码重新登录。"
+                : response.status === 404
+                  ? "这段原声已被替换或删除，请重新连接设备刷新备忘录。"
+                  : "原声读取失败，请保持设备在设置页后重试。",
+            );
+          }
+          const blob = await response.blob();
+          if (disposed) return;
+          if (
+            !blob.type.startsWith("audio/ogg") ||
+            blob.size < 167 ||
+            blob.size > 408167
+          )
+            throw Error("音频数据不完整，请重试。");
+          url = URL.createObjectURL(blob);
+          download.href = url;
+          download.classList.remove("hidden");
+          button.classList.add("hidden");
+          if (supported) {
+            audio.src = url;
+            audio.classList.remove("hidden");
+            try {
+              await audio.play();
+            } catch {
+              /* Native controls remain available. */
+            }
+          }
+        } catch (error) {
+          if (!disposed)
+            failure =
+              error.name === "AbortError" || error instanceof TypeError
+                ? "载入中断，请重新连接 Passport-Memo 热点后重试。"
+                : error.message;
+        } finally {
+          clearTimeout(timer);
+          preview.loading = false;
+          if (!disposed) preview.update();
+        }
+      };
+      previews.push(preview);
+      preview.update();
+      box.append(heading, button, audio, hint, download);
+      return box;
+    }
     function render() {
+      disposePreviews();
       let root = $("#notes");
       root.replaceChildren();
       $("#count").textContent = `${records.length} / 32`;
@@ -564,10 +755,23 @@
         save.onclick = () => edit(r.done);
         done.onclick = () => edit(!r.done);
         remove.onclick = () => {
-          if (confirm("删除这条备忘录？建议先导出备份。")) edit(r.done, true);
+          if (
+            confirm(
+              r.audio_available
+                ? "删除这条备忘录及其原声？建议先下载原声并导出文字。"
+                : "删除这条备忘录？建议先导出备份。",
+            )
+          )
+            edit(r.done, true);
         };
         row.append(save, done, remove);
-        card.append(head, text, counter, row);
+        card.append(head, text, counter);
+        card.append(
+          r.audio_available
+            ? audioPreview(r, date)
+            : node("p", "未保留原声 · 设备仅保留最近一段录音", "muted"),
+        );
+        card.append(row);
         root.append(card);
       }
     }

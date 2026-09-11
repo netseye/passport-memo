@@ -2,6 +2,13 @@
 
 # Changelog
 
+## Browser audio preview — 2026-09-12
+
+- Preview the latest saved recording in the local portal, with native play/pause, seeking and download controls.
+- Keep loaded audio playable in the current page after a hotspot disconnect; explain absent and replaced recordings.
+- Authenticate audio fetches using the existing header-based code and stream CRC-verified Ogg without a device decoder or full-clip RAM allocation.
+- Add bounded export/failure tests, reference decoding, phone-width browser checks and illustrated instructions.
+
 ## First-text latency — 2026-09-11
 
 - Enable moderate first-text acceleration while retaining cumulative output and second-pass corrections; early words may be revised.

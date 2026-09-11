@@ -13,3 +13,5 @@ EE04 synchronization authenticates writes and receipts using HMAC-SHA256 and sho
 Application logs intentionally omit credentials and transcripts. Review all lower-level logs before sharing: system logs may still identify a device or network. JSON exports and Flash backups are private user data.
 
 For vulnerabilities use [private reporting](https://github.com/netseye/passport-memo/security/advisories/new); if unavailable, request a private contact without posting exploit details. See the [security policy](../.github/SECURITY.md).
+
+Browser preview transfers the latest saved recording only after a user click, over the authenticated local setup connection. The code stays in the `X-Memo-Key` header; audio responses are `no-store`. The browser keeps a temporary in-page Blob, and explicit downloads remain on the phone/computer after device cache deletion. Close the page and manage downloaded copies separately when removing private recordings. No audio is sent to another service by preview or download.

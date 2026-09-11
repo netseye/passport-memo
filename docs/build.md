@@ -65,3 +65,11 @@ MEMO_PREVIEW_MAX_TEXT=1 build/ui-preview/memo_preview 4 build/review-max.ppm
 CI runs the same gates on pushes and pull requests. It uploads the merged development image but never flashes a device, creates a tag or publishes a release. [EE04 uses a separate Arduino build](../companion/ee04/README.md); never interchange the two boards' binaries.
 
 Upgrading for replay requires both the partition table and application. Flashing only the app leaves ASR available but disables caching/playback. Do not erase `memo` or `cardid`.
+
+## Local portal preview
+
+Run `python3 tools/preview_portal.py`, open `http://127.0.0.1:8766`, and enter the public demonstration code `12345678`. This read-only preview serves fictional notes and `tests/fixtures/demo-tone.ogg`, a synthetic 440 Hz tone. Regenerate the fixture using `python3 tests/test_memo_ogg_decode.py tests/fixtures/demo-tone.ogg` (requires libopus and FFmpeg).
+
+The web-preview update needs only the application when the replay partition is already installed. Preserve the existing table, identity, memo and replay data.
+
+Host checks also require Node.js 20 or newer for the portal controller tests.

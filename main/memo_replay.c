@@ -150,6 +150,32 @@ void memo_replay_forget(uint32_t record_id) {
   }
 }
 void memo_replay_stop(void) { atomic_store(&stopped, true); }
+bool memo_replay_saved_info(uint32_t record_id, unsigned *duration_ms) {
+  if (!record_id || !ready || writing || info.record_id != record_id)
+    return false;
+  if (duration_ms) *duration_ms = info.samples / 16;
+  return true;
+}
+typedef struct {
+  memo_replay_write_t write;
+  void *ctx;
+} stream_t;
+static bool stream_read(void *ctx, size_t offset, void *data, size_t bytes) {
+  (void)ctx;
+  return esp_partition_read(partition, MEMO_REPLAY_DATA_OFFSET + offset,
+                            data, bytes) == ESP_OK;
+}
+static bool stream_write(void *ctx, const void *data, size_t bytes) {
+  stream_t *stream = ctx;
+  return stream->write(stream->ctx, data, bytes);
+}
+memo_export_result_t memo_replay_stream(uint32_t record_id,
+                                       memo_replay_write_t write, void *ctx) {
+  if (!write || !memo_replay_saved_info(record_id, NULL))
+    return MEMO_EXPORT_INVALID;
+  stream_t stream = {.write = write, .ctx = ctx};
+  return memo_replay_export(&info, stream_read, stream_write, &stream);
+}
 void memo_replay_volume_step(int delta) {
   int next = atomic_load(&volume) + delta;
   atomic_store(&volume, next < 10 ? 10 : next > 100 ? 100 : next);
