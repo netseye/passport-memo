@@ -94,7 +94,7 @@ static void update(lv_timer_t *timer) {
   } else if (v.phase == MEMO_SETTINGS) {
     char settings[320];
     snprintf(settings, sizeof(settings),
-             "热点 Passport-Memo\n密码\n%s\n192.168.4.1\n%s",
+             "热点 Passport-Memo\n密码 %s\n192.168.4.1\n%s",
              v.setup_key[0] ? v.setup_key : "开启中…",
              v.portal ? "保存后按上键联网" : "长按确定开启热点");
     set_text(content, settings);

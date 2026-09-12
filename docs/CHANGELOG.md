@@ -2,6 +2,10 @@
 
 # Changelog
 
+## Password row — 2026-09-12
+
+- Place the setup password label and its digits on one line; refresh the illustrated setup screen.
+
 ## Device note actions and clock — 2026-09-12
 
 - Hold DOWN in history for deletion, e-paper sync and return actions. Deletion shows a note excerpt and defaults to Keep; other notes and drafts are retained.
